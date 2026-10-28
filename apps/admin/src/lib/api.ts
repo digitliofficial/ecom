@@ -10,8 +10,11 @@ import {
   type AuthUser,
   type CreateAdminFulfillmentInput,
   type DomainsConfig,
+  type DsarRequestDetail,
+  type DsarRequestSummary,
   type LocalizationSettingsUpdate,
   type PaymentSettingsUpdate,
+  type PrivacySettingsUpdate,
   type Product,
   type ProductCreateInput,
   type ProductUpdateInput,
@@ -21,6 +24,7 @@ import {
   type TenantDomain,
   type TenantLocalizationSettings,
   type TenantPaymentSettings,
+  type TenantPrivacySettings,
   type UpdateAdminFulfillmentInput,
 } from '@ecom/sdk-api';
 import {
@@ -182,6 +186,24 @@ export async function updateAdminLocalizationSettings(
   body: LocalizationSettingsUpdate,
 ): Promise<TenantLocalizationSettings> {
   return client().updateAdminLocalizationSettings(body);
+}
+
+export async function getAdminPrivacySettings(): Promise<TenantPrivacySettings> {
+  return client().getAdminPrivacySettings();
+}
+
+export async function updateAdminPrivacySettings(
+  body: PrivacySettingsUpdate,
+): Promise<TenantPrivacySettings> {
+  return client().updateAdminPrivacySettings(body);
+}
+
+export async function listAdminDsar(): Promise<DsarRequestSummary[]> {
+  return client().listAdminDsar();
+}
+
+export async function getAdminDsar(id: string): Promise<DsarRequestDetail> {
+  return client().getAdminDsar(id);
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {

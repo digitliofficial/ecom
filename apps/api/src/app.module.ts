@@ -12,6 +12,7 @@ import { ShippingModule } from './shipping/shipping.module';
 import { DomainsModule } from './domains/domains.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { LocalizationModule } from './localization/localization.module';
+import { PrivacyModule } from './privacy/privacy.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { LocalizationModule } from './localization/localization.module';
     DomainsModule,
     AnalyticsModule,
     LocalizationModule,
+    PrivacyModule,
   ],
 })
 export class AppModule {}

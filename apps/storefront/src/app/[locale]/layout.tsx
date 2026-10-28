@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { defaultTheme } from '@ecom/themes';
 import { AccountAuth } from '../../components/AccountAuth';
+import { CookieConsentBanner } from '../../components/CookieConsentBanner';
 import { StorefrontSwitchers } from '../../components/StorefrontSwitchers';
 
 export default async function LocaleLayout({
@@ -34,7 +35,14 @@ export default async function LocaleLayout({
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'baseline',
+            flexWrap: 'wrap',
+          }}
+        >
           <Link
             href={`/${locale}`}
             style={{ color: 'inherit', textDecoration: 'none' }}
@@ -44,6 +52,12 @@ export default async function LocaleLayout({
           <span style={{ opacity: 0.65, letterSpacing: '0.04em' }}>
             guest + account checkout
           </span>
+          <Link
+            href={`/${locale}/privacy`}
+            style={{ color: 'inherit', opacity: 0.8, textDecoration: 'underline' }}
+          >
+            Privacy
+          </Link>
         </div>
         <div
           style={{
@@ -57,7 +71,8 @@ export default async function LocaleLayout({
           <AccountAuth />
         </div>
       </header>
-      <main style={{ padding: '0 1.5rem 3rem' }}>{children}</main>
+      <main style={{ padding: '0 1.5rem 5rem' }}>{children}</main>
+      <CookieConsentBanner locale={locale} />
     </div>
   );
 }
