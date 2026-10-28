@@ -114,7 +114,10 @@ ALTER TABLE order_lines FORCE ROW LEVEL SECURITY;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE products, product_variants, orders, order_lines TO ecom_app;
 
--- Host → tenant without needing RLS context (used by Nest tenancy middleware)
+-- Host → tenant without needing RLS context (used by Nest TenantGuard).
+-- Fresh volumes get this via docker-entrypoint-initdb.d; existing volumes:
+--   pnpm db:apply
+-- or wipe local demo: docker compose down -v && docker compose up -d
 CREATE OR REPLACE FUNCTION resolve_tenant_id_by_host(p_host text)
 RETURNS uuid
 LANGUAGE sql
@@ -128,6 +131,7 @@ AS $$
   LIMIT 1;
 $$;
 
+REVOKE ALL ON FUNCTION resolve_tenant_id_by_host(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION resolve_tenant_id_by_host(text) TO ecom_app;
 
 -- Isolation tenant (for cross-tenant tests)

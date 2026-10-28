@@ -27,6 +27,10 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
+# If the Postgres volume predates guest-checkout init (catalog 500 /
+# missing resolve_tenant_id_by_host), upgrade schema+seed without wiping:
+pnpm db:apply
+
 # Dev (all apps) or filter
 pnpm dev
 # pnpm --filter @ecom/api dev
@@ -42,9 +46,23 @@ pnpm dev
 | Postgres | `localhost:5432` (`ecom` / `ecom`) |
 | Redis | `localhost:6379` |
 
-Demo tenant: slug `demo`, hosts `demo.localhost` / `localhost`. Isolation fixture: `other` / `other.localhost`.
+Demo tenant: slug `demo`, hosts `demo.localhost` / `localhost`. Isolation fixture: `other` / `other.localhost`. Storefront sends `X-Forwarded-Host: demo.localhost` (or use `x-tenant-host`).
 
-App DB user for RLS: `ecom_app` / `ecom` (see `.env.example`). Owner `ecom` bypasses RLS as superuser in Compose.
+App DB user for RLS: `ecom_app` / `ecom` (see `.env.example`). Owner `ecom` bypasses RLS as superuser in Compose. Init SQL under `infra/docker/postgres/init/` runs only on **first** volume create.
+
+#### Stale local Postgres volume
+
+Compose init scripts do not re-run on existing volumes. If Nest logs `function resolve_tenant_id_by_host(...) does not exist` or storefront shows catalog **500**:
+
+```bash
+# Preferred — idempotent upgrade (keeps volume data)
+pnpm db:apply
+
+# Or wipe local demo data and re-seed from init/ (OK for local demo only)
+docker compose down -v && docker compose up -d
+```
+
+Then re-check: `curl -sS -H 'x-tenant-host: demo.localhost' http://localhost:3001/v1/catalog/products`
 
 ### Auth / passwords
 
