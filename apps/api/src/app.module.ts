@@ -14,6 +14,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { LocalizationModule } from './localization/localization.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { CmsModule } from './cms/cms.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CmsModule } from './cms/cms.module';
     LocalizationModule,
     PrivacyModule,
     CmsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@ecom/domain-types": "workspace:*",
+    "@ecom/email-providers": "workspace:*",
+    "@ecom/email-templates": "workspace:*",
     "@ecom/money": "workspace:*",
     "@ecom/payment-providers": "workspace:*",
     "@ecom/sdk-compute": "workspace:*",

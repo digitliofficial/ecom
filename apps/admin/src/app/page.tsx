@@ -18,8 +18,8 @@ export default async function AdminHome() {
         Signed in as demo tenant staff. Manage catalog, orders (split
         fulfillments), offline payments, shipping methods, custom domains,
         analytics ingest, CMS (menus / SEO / theme / policies), privacy
-        (cookie consent + DSAR), and localization (multi-language /
-        multi-currency).
+        (cookie consent + DSAR), notifications (lifecycle + abandoned cart),
+        and localization (multi-language / multi-currency).
       </p>
       <ul style={{ marginTop: '1.25rem', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
         <li>
@@ -45,6 +45,9 @@ export default async function AdminHome() {
         </li>
         <li>
           <Link href="/privacy">Privacy</Link> — cookie banner, DPA, DSAR inbox
+        </li>
+        <li>
+          <Link href="/notifications">Notifications</Link> — email prefs + abandoned cart
         </li>
         <li>
           <Link href="/localization">Localization</Link> — multi-language &amp;

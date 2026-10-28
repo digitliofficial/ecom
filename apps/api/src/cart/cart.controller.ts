@@ -138,6 +138,30 @@ export class CartController {
     return this.carts.removeLine(req.tenantId!, id, lineId);
   }
 
+  /** Early email capture for abandoned-cart eligibility (Arch §8). */
+  @Patch('current/email')
+  async setEmailCurrent(
+    @Req() req: TenantRequest,
+    @Body() body: { email?: string },
+  ) {
+    const cart = await this.requireCurrentCart(req);
+    if (!body.email) throw new BadRequestException('email is required');
+    return this.carts.setEmail(req.tenantId!, cart.id, body.email);
+  }
+
+  @Patch(':id/email')
+  async setEmail(
+    @Req() req: TenantRequest,
+    @Param('id') id: string,
+    @Body() body: { email?: string },
+  ) {
+    const cart = await this.carts.getById(req.tenantId!, id);
+    if (!cart) throw new NotFoundException('Cart not found');
+    this.assertTokenOwnsCart(req, cart.guestToken);
+    if (!body.email) throw new BadRequestException('email is required');
+    return this.carts.setEmail(req.tenantId!, id, body.email);
+  }
+
   private async requireCurrentCart(req: TenantRequest) {
     const token = readGuestToken(req);
     if (!token) throw new NotFoundException('No guest cart token');

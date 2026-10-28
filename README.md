@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy + CMS** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR** + **CMS** (menus, SEO, theme packs, policy pages), platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy + CMS + lifecycle email** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping + **notification** settings (console EmailProvider MVP; optional Resend; abandoned-cart reminders) + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR** + **CMS** (menus, SEO, theme packs, policy pages), platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -27,7 +27,7 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
-# If the Postgres volume predates catalog/admin/auth/payments/shipping/privacy/cms SQL, re-apply idempotent init:
+# If the Postgres volume predates catalog/admin/auth/payments/shipping/privacy/cms/notifications SQL, re-apply idempotent init:
 pnpm db:apply
 # Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
@@ -402,6 +402,59 @@ curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
 ```
 
 Allowed ingest `eventName` values: `page_view`, `product_view`, `add_to_cart`, `begin_checkout`, `purchase`, `custom`.
+
+### Emails / abandoned cart (local)
+
+Transactional mail is **outbox-driven**. The Nest API drains the outbox after checkout and order status changes, and a lightweight in-process worker ticks every ~15s (disable with `NOTIFICATIONS_WORKER=0`).
+
+**Default provider is `console`** — emails are printed to the Nest API terminal, not sent over the network:
+
+```text
+========== EMAIL (console provider) ==========
+id:      console_…
+from:    noreply@localhost
+to:      guest@example.com
+subject: Order … confirmed
+-------- body --------
+Thanks for your order …
+=============================================
+```
+
+| Event | Customer | Merchant |
+|---|---|---|
+| Order placed | yes | yes (alert to `merchantAlertEmail` / owner) |
+| Fulfilled / shipped | yes | — |
+| Cancelled | yes | — |
+| Abandoned cart (step 1) | yes (when enabled) | — |
+
+```bash
+pnpm db:apply                       # applies 15-notifications.sql
+pnpm --filter @ecom/api dev         # watch this terminal for EMAIL blocks
+pnpm --filter @ecom/admin dev       # :3002 → Notifications
+```
+
+1. Complete a guest checkout on the storefront — customer **order placed** + merchant **new order** blocks appear in the API console.
+2. In admin **Orders**, mark the order shipped/fulfilled or cancelled — matching customer mail prints to console.
+3. Open http://localhost:3002/notifications — toggle abandoned cart, idle TTL (`0` = immediate for demos), merchant alert email.
+4. Capture a cart email early, then run abandon scan:
+
+```bash
+# After POST /v1/carts + add line:
+curl -sS -X PATCH -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -H "X-Cart-Token: $GUEST_TOKEN" \
+  -d '{"email":"abandon@example.com"}' \
+  http://localhost:3001/v1/carts/$CART_ID/email
+
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+# Demo seed: abandoned cart enabled, idle minutes = 0
+curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/notifications/process
+```
+
+**Optional Resend:** set `RESEND_API_KEY` (and optionally `EMAIL_PROVIDER=resend`, `EMAIL_FROM=…`) in `.env`. With a key present, Nest uses the Resend adapter instead of console.
 
 ## Workspace layout
 

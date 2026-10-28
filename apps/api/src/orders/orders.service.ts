@@ -7,6 +7,7 @@ import type { OrderStatus } from '@ecom/domain-types';
 import type { PoolClient } from 'pg';
 import { ComputeClientService } from '../common/compute.client';
 import { DatabaseService } from '../db/database.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type ShippingAddressDto = {
   line1: string;
@@ -193,6 +194,7 @@ export class OrdersService {
   constructor(
     private readonly db: DatabaseService,
     private readonly compute: ComputeClientService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async listAdminOrders(tenantId: string): Promise<OrderSummaryDto[]> {
@@ -473,6 +475,38 @@ export class OrdersService {
       }
 
       return this.loadDetail(client, id);
+    }).then(async (detail) => {
+      const customerEmail =
+        detail.guestEmail ??
+        (await this.resolveCustomerEmail(tenantId, detail.customerId));
+      try {
+        await this.notifications.notifyOrderStatus({
+          tenantId,
+          orderId: detail.id,
+          status,
+          customerEmail,
+          totalAmountMinor: detail.totalAmountMinor,
+          currency: detail.chargeCurrency,
+        });
+        await this.notifications.processOutbox();
+      } catch {
+        /* worker retries outbox */
+      }
+      return detail;
+    });
+  }
+
+  private async resolveCustomerEmail(
+    tenantId: string,
+    customerId: string | null,
+  ): Promise<string | null> {
+    if (!customerId) return null;
+    return this.db.withTenant(tenantId, async (client) => {
+      const res = await client.query<{ email: string }>(
+        `SELECT email FROM customers WHERE id = $1`,
+        [customerId],
+      );
+      return res.rows[0]?.email ?? null;
     });
   }
 

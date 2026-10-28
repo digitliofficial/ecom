@@ -172,6 +172,16 @@ export type TenantPaymentSettings = {
   stripeEnabled: boolean;
 };
 
+export type TenantNotificationSettings = {
+  orderPlacedCustomer: boolean;
+  orderPlacedMerchant: boolean;
+  orderShippedCustomer: boolean;
+  orderCancelledCustomer: boolean;
+  abandonedCartEnabled: boolean;
+  abandonedCartIdleMinutes: number;
+  merchantAlertEmail?: string | null;
+};
+
 export type TenantLocalizationSettings = {
   defaultLocale: string;
   defaultCurrency: string;
