@@ -82,6 +82,12 @@ export function StoreShell({ locale, cms, children }: StoreShellProps) {
               </Link>
             ))}
             <Link
+              href={`/${locale}/wishlist`}
+              style={{ color: tokens.colors.muted, textDecoration: 'none' }}
+            >
+              Wishlist
+            </Link>
+            <Link
               href={`/${locale}/privacy`}
               style={{
                 color: tokens.colors.muted,

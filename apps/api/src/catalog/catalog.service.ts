@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { PoolClient } from 'pg';
 import { MeteringService } from '../billing/metering.service';
+import { B2bPricingService } from '../b2b/b2b-pricing.service';
 import { DatabaseService } from '../db/database.service';
 
 export type VariantDto = {
@@ -15,6 +16,8 @@ export type VariantDto = {
   unitAmountMinor: number;
   currency: string;
   inventoryQuantity: number;
+  priceSource?: 'retail' | 'price_list';
+  compareAtAmountMinor?: number;
 };
 
 export type ProductDto = {
@@ -23,6 +26,8 @@ export type ProductDto = {
   title: string;
   description: string | null;
   status: string;
+  ratingAvg?: number;
+  ratingCount?: number;
   variants: VariantDto[];
 };
 
@@ -65,17 +70,25 @@ export class CatalogService {
   constructor(
     private readonly db: DatabaseService,
     private readonly metering: MeteringService,
+    private readonly pricing: B2bPricingService,
   ) {}
 
-  async listProducts(tenantId: string): Promise<ProductDto[]> {
+  async listProducts(
+    tenantId: string,
+    customerId?: string | null,
+  ): Promise<ProductDto[]> {
     return this.db.withTenant(tenantId, async (client) => {
-      return this.loadProducts(client, { activeOnly: true });
+      return this.loadProducts(client, {
+        activeOnly: true,
+        tenantId,
+        customerId,
+      });
     });
   }
 
   async listAdminProducts(tenantId: string): Promise<ProductDto[]> {
     return this.db.withTenant(tenantId, async (client) => {
-      return this.loadProducts(client, { activeOnly: false });
+      return this.loadProducts(client, { activeOnly: false, tenantId });
     });
   }
 
@@ -83,6 +96,7 @@ export class CatalogService {
     return this.db.withTenant(tenantId, async (client) => {
       const products = await this.loadProducts(client, {
         activeOnly: false,
+        tenantId,
         productId,
       });
       const product = products[0];
@@ -147,6 +161,7 @@ export class CatalogService {
 
       const products = await this.loadProducts(client, {
         activeOnly: false,
+        tenantId,
         productId,
       });
       return products[0]!;
@@ -278,6 +293,7 @@ export class CatalogService {
 
       const products = await this.loadProducts(client, {
         activeOnly: false,
+        tenantId,
         productId,
       });
       return products[0]!;
@@ -286,7 +302,12 @@ export class CatalogService {
 
   private async loadProducts(
     client: PoolClient,
-    opts: { activeOnly: boolean; productId?: string },
+    opts: {
+      activeOnly: boolean;
+      tenantId: string;
+      productId?: string;
+      customerId?: string | null;
+    },
   ): Promise<ProductDto[]> {
     const params: unknown[] = [];
     const clauses: string[] = [];
@@ -303,8 +324,12 @@ export class CatalogService {
       title: string;
       description: string | null;
       status: string;
+      rating_avg: string;
+      rating_count: number;
     }>(
-      `SELECT id, slug, title, description, status
+      `SELECT id, slug, title, description, status,
+              COALESCE(rating_avg, 0)::text AS rating_avg,
+              COALESCE(rating_count, 0)::int AS rating_count
        FROM products
        ${where}
        ORDER BY created_at`,
@@ -331,22 +356,40 @@ export class CatalogService {
       [productIds],
     );
 
+    const overrides =
+      opts.customerId && variants.rows.length
+        ? await this.pricing.listOverridesForCustomer(
+            client,
+            opts.tenantId,
+            opts.customerId,
+            variants.rows.map((v) => v.id),
+          )
+        : new Map();
+
     return products.rows.map((p) => ({
       id: p.id,
       slug: p.slug,
       title: p.title,
       description: p.description,
       status: p.status,
+      ratingAvg: Number(p.rating_avg),
+      ratingCount: Number(p.rating_count),
       variants: variants.rows
         .filter((v) => v.product_id === p.id)
-        .map((v) => ({
-          id: v.id,
-          sku: v.sku,
-          title: v.title,
-          unitAmountMinor: Number(v.unit_amount_minor),
-          currency: v.currency,
-          inventoryQuantity: Number(v.inventory_quantity),
-        })),
+        .map((v) => {
+          const retail = Number(v.unit_amount_minor);
+          const override = overrides.get(v.id);
+          return {
+            id: v.id,
+            sku: v.sku,
+            title: v.title,
+            unitAmountMinor: override?.unitAmountMinor ?? retail,
+            currency: override?.currency ?? v.currency,
+            inventoryQuantity: Number(v.inventory_quantity),
+            priceSource: override?.source ?? 'retail',
+            compareAtAmountMinor: override ? retail : undefined,
+          };
+        }),
     }));
   }
 
