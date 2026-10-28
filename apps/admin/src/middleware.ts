@@ -1,20 +1,24 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { ADMIN_STUB_COOKIE, parseStubSessionValue } from './lib/auth-session';
+import {
+  STAFF_SESSION_COOKIE,
+  hasStaffSessionCookie,
+} from './lib/auth-session';
 
 export function middleware(request: NextRequest) {
-  const session = parseStubSessionValue(request.cookies.get(ADMIN_STUB_COOKIE)?.value);
+  const session = request.cookies.get(STAFF_SESSION_COOKIE)?.value;
+  const loggedIn = hasStaffSessionCookie(session);
   const { pathname } = request.nextUrl;
   const isLogin = pathname === '/login' || pathname.startsWith('/login/');
 
-  if (!session && !isLogin) {
+  if (!loggedIn && !isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.search = '';
     return NextResponse.redirect(url);
   }
 
-  if (session && isLogin) {
+  if (loggedIn && isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     url.search = '';

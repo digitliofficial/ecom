@@ -3,30 +3,34 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@ecom/i18n-messages';
-import { setStubSession } from '../lib/auth-session';
+import { staffLogin } from '../lib/api';
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('owner@demo.localhost');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
+    const trimmedPassword = password;
     if (!trimmedEmail || !trimmedPassword) {
-      setError('Enter any non-empty email and password (local stub).');
+      setError('Enter email and password.');
       return;
     }
-    if (!trimmedEmail.includes('@')) {
-      setError('Enter a valid-looking email (local stub).');
-      return;
-    }
+    setPending(true);
     setError(null);
-    setStubSession(trimmedEmail);
-    router.replace('/');
-    router.refresh();
+    try {
+      await staffLogin(trimmedEmail, trimmedPassword);
+      router.replace('/');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -38,7 +42,7 @@ export function LoginForm() {
         type="email"
         name="email"
         autoComplete="username"
-        placeholder="staff@merchant.com"
+        placeholder="owner@demo.localhost"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         style={{ padding: '0.6rem' }}
@@ -47,7 +51,7 @@ export function LoginForm() {
         type="password"
         name="password"
         autoComplete="current-password"
-        placeholder="Password (any value)"
+        placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         style={{ padding: '0.6rem' }}
@@ -58,11 +62,15 @@ export function LoginForm() {
         </p>
       ) : (
         <p style={{ margin: 0, opacity: 0.7, fontSize: '0.85rem' }}>
-          Stub only — any non-empty password works locally.
+          Demo: owner@demo.localhost / DemoOwner123!
         </p>
       )}
-      <button type="submit" style={{ padding: '0.65rem', cursor: 'pointer' }}>
-        {t('en', 'admin.login')}
+      <button
+        type="submit"
+        disabled={pending}
+        style={{ padding: '0.65rem', cursor: pending ? 'wait' : 'pointer' }}
+      >
+        {pending ? 'Signing in…' : t('en', 'admin.login')}
       </button>
     </form>
   );

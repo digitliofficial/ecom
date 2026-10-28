@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { clearStubSession } from '../lib/auth-session';
+import { staffLogout } from '../lib/api';
 
 type AdminShellProps = {
   email: string;
@@ -13,8 +13,8 @@ type AdminShellProps = {
 export function AdminShell({ email, children }: AdminShellProps) {
   const router = useRouter();
 
-  function signOut() {
-    clearStubSession();
+  async function signOut() {
+    await staffLogout();
     router.replace('/login');
     router.refresh();
   }
@@ -38,7 +38,7 @@ export function AdminShell({ email, children }: AdminShellProps) {
           <span style={{ opacity: 0.75, fontSize: '0.85rem' }}>{email}</span>
           <button
             type="button"
-            onClick={signOut}
+            onClick={() => void signOut()}
             style={{
               padding: '0.35rem 0.65rem',
               cursor: 'pointer',

@@ -1,57 +1,55 @@
-/** Local stub session for merchant admin — not real auth. */
+/** Merchant admin session helpers — JWT lives in httpOnly cookie from Nest. */
 
-export const ADMIN_STUB_COOKIE = 'ecom_admin_stub_session';
-export const ADMIN_STUB_STORAGE_KEY = 'ecom_admin_stub_session';
+export const STAFF_SESSION_COOKIE = 'ecom_staff_session';
+export const STAFF_TOKEN_STORAGE_KEY = 'ecom_staff_bearer';
 
-export type StubSession = {
-  email: string;
-};
-
-export function parseStubSessionValue(raw: string | undefined | null): StubSession | null {
-  if (!raw) return null;
+/** Client-only: remember bearer for API calls (mirrors httpOnly cookie for same origin quirks). */
+export function setStaffBearer(token: string): void {
   try {
-    const decoded = decodeURIComponent(raw);
-    const email = decoded.trim();
-    if (!email || !email.includes('@')) return null;
-    return { email };
-  } catch {
-    return null;
-  }
-}
-
-/** Client-only: persist stub session (cookie + localStorage). */
-export function setStubSession(email: string): void {
-  const value = encodeURIComponent(email.trim());
-  document.cookie = `${ADMIN_STUB_COOKIE}=${value}; path=/; SameSite=Lax; Max-Age=86400`;
-  try {
-    localStorage.setItem(ADMIN_STUB_STORAGE_KEY, email.trim());
-  } catch {
-    /* ignore quota / private mode */
-  }
-}
-
-/** Client-only: clear stub session. */
-export function clearStubSession(): void {
-  document.cookie = `${ADMIN_STUB_COOKIE}=; path=/; SameSite=Lax; Max-Age=0`;
-  try {
-    localStorage.removeItem(ADMIN_STUB_STORAGE_KEY);
+    localStorage.setItem(STAFF_TOKEN_STORAGE_KEY, token);
   } catch {
     /* ignore */
   }
 }
 
-/** Client-only: read session from cookie, fall back to localStorage. */
-export function readStubSessionClient(): StubSession | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie
-    .split(';')
-    .map((c) => c.trim())
-    .find((c) => c.startsWith(`${ADMIN_STUB_COOKIE}=`));
-  const fromCookie = parseStubSessionValue(match?.slice(ADMIN_STUB_COOKIE.length + 1));
-  if (fromCookie) return fromCookie;
+export function clearStaffBearer(): void {
   try {
-    return parseStubSessionValue(localStorage.getItem(ADMIN_STUB_STORAGE_KEY));
+    localStorage.removeItem(STAFF_TOKEN_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readStaffBearer(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return localStorage.getItem(STAFF_TOKEN_STORAGE_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Decode JWT payload without verifying (UI display only; API verifies). */
+export function readStaffEmailFromCookie(
+  raw: string | undefined | null,
+): string | null {
+  if (!raw) return null;
+  try {
+    const token = decodeURIComponent(raw);
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const json = atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(json) as { email?: string; kind?: string };
+    if (payload.kind && payload.kind !== 'staff') return null;
+    const email = payload.email?.trim();
+    return email?.includes('@') ? email : null;
   } catch {
     return null;
   }
+}
+
+export function hasStaffSessionCookie(
+  raw: string | undefined | null,
+): boolean {
+  return Boolean(raw && raw.split('.').length >= 3);
 }

@@ -1,14 +1,32 @@
 'use client';
 
-import { useState, useTransition, type CSSProperties, type FormEvent } from 'react';
+import {
+  useEffect,
+  useState,
+  useTransition,
+  type CSSProperties,
+  type FormEvent,
+} from 'react';
 import Link from 'next/link';
-import type { CheckoutSessionResult } from '@ecom/sdk-api';
+import type { AuthUser, CheckoutSessionResult } from '@ecom/sdk-api';
 import { checkout, formatMoney } from '../lib/api';
+import { fetchCustomerMe } from '../lib/auth';
 
 export function CheckoutForm({ locale }: { locale: string }) {
   const [result, setResult] = useState<CheckoutSessionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [customer, setCustomer] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCustomerMe().then((me) => {
+      if (!cancelled) setCustomer(me);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -74,13 +92,25 @@ export function CheckoutForm({ locale }: { locale: string }) {
       <h1 style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontWeight: 500 }}>
         Checkout
       </h1>
+      <p style={{ opacity: 0.75, marginTop: '0.5rem' }}>
+        {customer
+          ? `Account checkout as ${customer.email}. Guest email still accepted if you change it.`
+          : 'Guest checkout — or sign in from the header for an account path (guest cart links on login).'}
+      </p>
       <form
         onSubmit={onSubmit}
         style={{ display: 'grid', gap: '0.75rem', marginTop: '1.5rem' }}
       >
         <label style={{ display: 'grid', gap: '0.35rem' }}>
           <span>Email</span>
-          <input name="email" type="email" required placeholder="guest@example.com" style={field} />
+          <input
+            name="email"
+            type="email"
+            required
+            defaultValue={customer?.email ?? ''}
+            placeholder="guest@example.com"
+            style={field}
+          />
         </label>
         <label style={{ display: 'grid', gap: '0.35rem' }}>
           <span>Address line 1</span>

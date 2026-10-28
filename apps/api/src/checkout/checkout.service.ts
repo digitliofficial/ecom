@@ -64,10 +64,11 @@ export class CheckoutService {
       cartId: string;
       email: string;
       shippingAddress: ShippingAddressInput;
+      customerId?: string | null;
     },
   ): Promise<CheckoutResult> {
     if (!input.email?.includes('@')) {
-      throw new BadRequestException('Valid guest email is required');
+      throw new BadRequestException('Valid email is required');
     }
     if (!input.shippingAddress?.line1 || !input.shippingAddress?.city || !input.shippingAddress?.country) {
       throw new BadRequestException(
@@ -133,12 +134,19 @@ export class CheckoutService {
       );
 
       const sessionId = session.rows[0]!.id;
+      if (input.customerId) {
+        await client.query(
+          `UPDATE carts SET customer_id = $1, updated_at = now() WHERE id = $2`,
+          [input.customerId, cart.id],
+        );
+      }
+
       const order = await client.query<{ id: string }>(
         `INSERT INTO orders
            (tenant_id, cart_id, checkout_session_id, status, payment_status,
-            guest_email, shipping_address, charge_currency, total_amount_minor,
+            guest_email, customer_id, shipping_address, charge_currency, total_amount_minor,
             access_token_hash)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11)
          RETURNING id`,
         [
           tenantId,
@@ -146,7 +154,8 @@ export class CheckoutService {
           sessionId,
           orderStatus,
           paymentStatus,
-          input.email,
+          input.customerId ? null : input.email,
+          input.customerId ?? null,
           JSON.stringify(input.shippingAddress),
           currency,
           total,
