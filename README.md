@@ -71,7 +71,7 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve/catalog admin applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
