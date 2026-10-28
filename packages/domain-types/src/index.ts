@@ -56,7 +56,24 @@ export type CheckoutSession = {
   normalizedAddress?: Record<string, unknown> | null;
 };
 
-export type OrderStatus = 'pending' | 'placed' | 'cancelled' | 'fulfilled' | 'partially_fulfilled';
+export type OrderStatus =
+  | 'pending'
+  | 'placed'
+  | 'cancelled'
+  | 'fulfilled'
+  | 'partially_fulfilled'
+  | 'shipped';
+
+export type OrderLine = {
+  id: string;
+  variantId: string;
+  title: string;
+  quantity: number;
+  unitAmountMinor: number;
+  currency: string;
+  qtyOrdered: number;
+  qtyFulfilled: number;
+};
 
 export type Order = {
   id: string;
@@ -66,8 +83,13 @@ export type Order = {
   status: OrderStatus;
   paymentStatus: string;
   guestEmail?: string | null;
+  customerId?: string | null;
   totalAmountMinor: number;
   chargeCurrency: string;
+  shippingAddress?: Record<string, unknown> | null;
+  createdAt?: string;
+  updatedAt?: string;
+  lines?: OrderLine[];
 };
 
 export type ProductStatus = 'active' | 'draft' | 'archived';

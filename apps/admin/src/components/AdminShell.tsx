@@ -34,6 +34,7 @@ export function AdminShell({ email, children }: AdminShellProps) {
         <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.95rem', alignItems: 'center' }}>
           <Link href="/">Dashboard</Link>
           <Link href="/products">Products</Link>
+          <Link href="/orders">Orders</Link>
           <Link href="/localization">Localization</Link>
           <span style={{ opacity: 0.75, fontSize: '0.85rem' }}>{email}</span>
           <button

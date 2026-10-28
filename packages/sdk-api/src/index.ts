@@ -117,6 +117,47 @@ export type CheckoutSessionResult = {
   payment: { id: string; status: string; provider: string };
 };
 
+export type AdminOrderStatus =
+  | 'pending'
+  | 'placed'
+  | 'cancelled'
+  | 'fulfilled'
+  | 'partially_fulfilled'
+  | 'shipped';
+
+export type AdminOrderStatusUpdate = 'fulfilled' | 'shipped' | 'cancelled';
+
+export type AdminOrderLine = {
+  id: string;
+  variantId: string;
+  title: string;
+  quantity: number;
+  unitAmountMinor: number;
+  currency: string;
+  qtyOrdered: number;
+  qtyFulfilled: number;
+};
+
+export type AdminOrderSummary = {
+  id: string;
+  status: AdminOrderStatus;
+  paymentStatus: string;
+  guestEmail: string | null;
+  customerId: string | null;
+  totalAmountMinor: number;
+  chargeCurrency: string;
+  createdAt: string;
+  updatedAt: string;
+  lineCount: number;
+};
+
+export type AdminOrderDetail = AdminOrderSummary & {
+  cartId: string | null;
+  checkoutSessionId: string | null;
+  shippingAddress: ShippingAddress | null;
+  lines: AdminOrderLine[];
+};
+
 export class ApiClient {
   constructor(private readonly opts: SdkApiOptions) {}
 
@@ -274,6 +315,21 @@ export class ApiClient {
     shippingAddress: ShippingAddress;
   }): Promise<CheckoutSessionResult> {
     return this.post<CheckoutSessionResult>('/v1/checkout/sessions', body);
+  }
+
+  listAdminOrders(): Promise<AdminOrderSummary[]> {
+    return this.get<AdminOrderSummary[]>('/v1/admin/orders');
+  }
+
+  getAdminOrder(id: string): Promise<AdminOrderDetail> {
+    return this.get<AdminOrderDetail>(`/v1/admin/orders/${id}`);
+  }
+
+  updateAdminOrderStatus(
+    id: string,
+    body: { status: AdminOrderStatusUpdate },
+  ): Promise<AdminOrderDetail> {
+    return this.patch<AdminOrderDetail>(`/v1/admin/orders/${id}/status`, body);
   }
 }
 

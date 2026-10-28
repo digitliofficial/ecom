@@ -2,6 +2,9 @@
 
 import {
   createApiClient,
+  type AdminOrderDetail,
+  type AdminOrderStatusUpdate,
+  type AdminOrderSummary,
   type AuthResult,
   type AuthUser,
   type Product,
@@ -72,6 +75,21 @@ export async function updateAdminProduct(
   body: ProductUpdateInput,
 ): Promise<Product> {
   return client().updateAdminProduct(id, body);
+}
+
+export async function listAdminOrders(): Promise<AdminOrderSummary[]> {
+  return client().listAdminOrders();
+}
+
+export async function getAdminOrder(id: string): Promise<AdminOrderDetail> {
+  return client().getAdminOrder(id);
+}
+
+export async function updateAdminOrderStatus(
+  id: string,
+  status: AdminOrderStatusUpdate,
+): Promise<AdminOrderDetail> {
+  return client().updateAdminOrderStatus(id, { status });
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {
