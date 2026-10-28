@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + order fulfill/ship/cancel (with tracking) + payment + shipping settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -71,7 +71,7 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — …/payments/shipping applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — …/payments/shipping/fulfillments applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
@@ -241,7 +241,7 @@ pnpm --filter @ecom/storefront dev  # :3005 → /en
 1. On the storefront, complete a guest checkout (any email + address) so an order is `placed`.
 2. Open http://localhost:3002/login — sign in as `owner@demo.localhost` / `DemoOwner123!`.
 3. Go to **Orders** — the guest order appears for the demo tenant (newest first).
-4. Open the order → optionally set **tracking number / carrier** → **Fulfill**, **Mark shipped**, or **Cancel** (`placed`/`pending` → terminal status). Fulfill and ship also set line `qty_fulfilled = qty_ordered` and write a `shipments` row.
+4. Open the order → set **Ship qty** per line → **Create shipment** (optional carrier/tracking; aggregator stub can mint tracking). Repeat for split shipments. Order rolls to `partially_fulfilled` then `fulfilled`. Shortcuts: **Fulfill remaining** / **Ship remaining** / **Cancel order** (also write `shipments` / tracking events).
 
 Admin API (staff JWT required; host → demo tenant):
 
@@ -256,13 +256,26 @@ curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
 curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
   http://localhost:3001/v1/admin/orders/<ORDER_ID>
 
+# Partial shipment (line qty + tracking)
+curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"lines":[{"orderLineId":"<LINE_ID>","qty":1}],"carrier":"TCS","trackingNumber":"TCS-1","markShipped":true}' \
+  http://localhost:3001/v1/admin/orders/<ORDER_ID>/fulfillments
+
+# Update tracking on an existing shipment
+curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"trackingNumber":"TCS-2","carrier":"TCS","status":"shipped"}' \
+  http://localhost:3001/v1/admin/orders/<ORDER_ID>/fulfillments/<FULFILLMENT_ID>
+
+# Shortcuts: fulfill/ship remaining, or cancel
 curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"status":"shipped","trackingNumber":"TCS-DEMO-001","trackingCarrier":"TCS"}' \
   http://localhost:3001/v1/admin/orders/<ORDER_ID>/status
 ```
 
-Allowed status updates from `placed` (or `pending`): `fulfilled`, `shipped`, `cancelled`.
+Fulfillments: multiple per order; each has lines (`orderLineId` + `qty`), optional `carrier` / `trackingNumber`, status `pending`|`shipped`|`delivered`|`cancelled`. Order status rolls up to `partially_fulfilled` / `fulfilled`. Status shortcuts from `placed`/`pending`/`partially_fulfilled`: `fulfilled` (remaining), `shipped` (remaining + order-level shipped), `cancelled`.
 
 ## Workspace layout
 

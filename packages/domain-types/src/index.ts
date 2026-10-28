@@ -73,6 +73,31 @@ export type OrderLine = {
   currency: string;
   qtyOrdered: number;
   qtyFulfilled: number;
+  qtyRefunded?: number;
+};
+
+export type FulfillmentStatus =
+  | 'pending'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled';
+
+export type FulfillmentLine = {
+  id: string;
+  orderLineId: string;
+  qty: number;
+  title?: string;
+};
+
+export type Fulfillment = {
+  id: string;
+  status: FulfillmentStatus;
+  trackingNumber?: string | null;
+  carrier?: string | null;
+  shippedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  lines: FulfillmentLine[];
 };
 
 export type OfflinePaymentMethod = 'cod' | 'bank_transfer';
@@ -111,6 +136,7 @@ export type Order = {
   createdAt?: string;
   updatedAt?: string;
   lines?: OrderLine[];
+  fulfillments?: Fulfillment[];
 };
 
 export type TenantPaymentSettings = {

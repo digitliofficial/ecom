@@ -206,6 +206,44 @@ export type AdminOrderLine = {
   currency: string;
   qtyOrdered: number;
   qtyFulfilled: number;
+  qtyRefunded: number;
+};
+
+export type AdminFulfillmentStatus =
+  | 'pending'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled';
+
+export type AdminFulfillmentLine = {
+  id: string;
+  orderLineId: string;
+  qty: number;
+  title: string;
+};
+
+export type AdminFulfillment = {
+  id: string;
+  status: AdminFulfillmentStatus;
+  trackingNumber: string | null;
+  carrier: string | null;
+  shippedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lines: AdminFulfillmentLine[];
+};
+
+export type CreateAdminFulfillmentInput = {
+  lines: { orderLineId: string; qty: number }[];
+  trackingNumber?: string | null;
+  carrier?: string | null;
+  markShipped?: boolean;
+};
+
+export type UpdateAdminFulfillmentInput = {
+  trackingNumber?: string | null;
+  carrier?: string | null;
+  status?: AdminFulfillmentStatus;
 };
 
 export type AdminOrderSummary = {
@@ -233,6 +271,7 @@ export type AdminOrderDetail = AdminOrderSummary & {
   trackingCarrier: string | null;
   shippedAt: string | null;
   lines: AdminOrderLine[];
+  fulfillments: AdminFulfillment[];
 };
 
 export class ApiClient {
@@ -452,6 +491,27 @@ export class ApiClient {
     },
   ): Promise<AdminOrderDetail> {
     return this.patch<AdminOrderDetail>(`/v1/admin/orders/${id}/status`, body);
+  }
+
+  createAdminFulfillment(
+    orderId: string,
+    body: CreateAdminFulfillmentInput,
+  ): Promise<AdminOrderDetail> {
+    return this.post<AdminOrderDetail>(
+      `/v1/admin/orders/${orderId}/fulfillments`,
+      body,
+    );
+  }
+
+  updateAdminFulfillment(
+    orderId: string,
+    fulfillmentId: string,
+    body: UpdateAdminFulfillmentInput,
+  ): Promise<AdminOrderDetail> {
+    return this.patch<AdminOrderDetail>(
+      `/v1/admin/orders/${orderId}/fulfillments/${fulfillmentId}`,
+      body,
+    );
   }
 }
 
