@@ -30,6 +30,7 @@ export class CheckoutController {
       cartId?: string;
       email?: string;
       shippingAddress?: ShippingAddressInput;
+      paymentMethod?: string;
     },
   ) {
     const customer = this.auth.optionalCustomerClaims(req);
@@ -61,11 +62,15 @@ export class CheckoutController {
     if (!body.shippingAddress) {
       throw new BadRequestException('shippingAddress is required');
     }
+    if (!body.paymentMethod) {
+      throw new BadRequestException('paymentMethod is required');
+    }
 
     return this.checkout.createSession(req.tenantId!, {
       cartId,
       email,
       shippingAddress: body.shippingAddress,
+      paymentMethod: body.paymentMethod,
       customerId: customer?.sub ?? null,
     });
   }

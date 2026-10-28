@@ -99,6 +99,7 @@ describe('guest checkout vertical slice', () => {
       .send({
         cartId,
         email: 'guest@example.com',
+        paymentMethod: 'cod',
         shippingAddress: {
           line1: ' 123 Demo St ',
           city: ' Austin ',
@@ -109,9 +110,12 @@ describe('guest checkout vertical slice', () => {
       .expect(201);
 
     expect(checkout.body.order.status).toBe('placed');
-    expect(checkout.body.order.paymentStatus).toBe('not_charged');
+    expect(checkout.body.order.paymentMethod).toBe('cod');
+    expect(checkout.body.order.paymentStatus).toBe('pending_cod');
     expect(checkout.body.order.totalAmountMinor).toBe(7500);
-    expect(checkout.body.payment.status).toBe('not_implemented');
+    expect(checkout.body.payment.status).toBe('pending_cod');
+    expect(checkout.body.payment.provider).toBe('cod');
+    expect(checkout.body.bankTransferInstructions).toBeNull();
     expect(checkout.body.addressValidation.mode).toBe('soft_warn');
     expect(checkout.body.addressValidation.warnings).toContain(
       'postal_code_missing',

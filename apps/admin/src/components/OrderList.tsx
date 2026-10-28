@@ -94,6 +94,7 @@ export function OrderList() {
             {' · '}
             {order.lineCount} line{order.lineCount === 1 ? '' : 's'}
             {' · '}
+            {order.paymentMethod ? `${order.paymentMethod}/` : ''}
             {order.paymentStatus}
             {' · '}
             {new Date(order.createdAt).toLocaleString()}

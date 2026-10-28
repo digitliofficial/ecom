@@ -3,7 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { NoopAdapter } from '@ecom/payment-providers';
+import {
+  isOfflinePaymentMethod,
+  offlineProviderFor,
+  type OfflinePaymentMethod,
+} from '@ecom/payment-providers';
 import { DatabaseService } from '../db/database.service';
 import { CartService } from '../cart/cart.service';
 import { ComputeClientService } from '../common/compute.client';
@@ -11,6 +15,10 @@ import {
   createGuestToken,
   hashAccessToken,
 } from '../common/guest-token';
+import {
+  PaymentsService,
+  type BankDetails,
+} from '../payments/payments.service';
 
 export type ShippingAddressInput = {
   line1: string;
@@ -37,6 +45,7 @@ export type CheckoutResult = {
     id: string;
     status: 'pending' | 'placed';
     paymentStatus: string;
+    paymentMethod: OfflinePaymentMethod;
     totalAmountMinor: number;
     currency: string;
     accessToken: string;
@@ -46,16 +55,17 @@ export type CheckoutResult = {
     status: string;
     provider: string;
   };
+  /** Present when paymentMethod is bank_transfer */
+  bankTransferInstructions: BankDetails | null;
 };
 
 @Injectable()
 export class CheckoutService {
-  private readonly payments = new NoopAdapter();
-
   constructor(
     private readonly db: DatabaseService,
     private readonly carts: CartService,
     private readonly compute: ComputeClientService,
+    private readonly paymentsConfig: PaymentsService,
   ) {}
 
   async createSession(
@@ -64,6 +74,7 @@ export class CheckoutService {
       cartId: string;
       email: string;
       shippingAddress: ShippingAddressInput;
+      paymentMethod: string;
       customerId?: string | null;
     },
   ): Promise<CheckoutResult> {
@@ -75,6 +86,17 @@ export class CheckoutService {
         'shippingAddress requires line1, city, and country',
       );
     }
+    if (!input.paymentMethod || !isOfflinePaymentMethod(input.paymentMethod)) {
+      throw new BadRequestException(
+        'paymentMethod must be cod or bank_transfer',
+      );
+    }
+
+    const paymentMethod = input.paymentMethod;
+    const { bankDetails } = await this.paymentsConfig.assertMethodEnabled(
+      tenantId,
+      paymentMethod,
+    );
 
     const cart = await this.carts.getById(tenantId, input.cartId);
     if (!cart) throw new NotFoundException('Cart not found');
@@ -99,21 +121,20 @@ export class CheckoutService {
     );
     const currency = cart.chargeCurrency ?? cart.lines[0]?.currency ?? 'USD';
 
-    // Soft-warn mode: never hard-block; surface warnings to client
-    const payment = await this.payments.createPayment({
+    // Offline PaymentProvider adapters (COD / bank transfer). Stripe/Noop stay optional.
+    const provider = offlineProviderFor(paymentMethod);
+    const payment = await provider.createPayment({
       tenantId,
       amountMinor: total,
       currency,
+      metadata: { paymentMethod },
     });
+
+    const orderStatus: 'pending' | 'placed' = 'placed';
+    const paymentStatus = payment.status;
 
     const accessToken = createGuestToken();
     const accessTokenHash = hashAccessToken(accessToken);
-
-    // Without real charging: place order as `placed` with payment deferred/not_charged
-    const orderStatus: 'pending' | 'placed' =
-      payment.status === 'succeeded' ? 'placed' : 'placed';
-    const paymentStatus =
-      payment.status === 'not_implemented' ? 'not_charged' : payment.status;
 
     return this.db.withTenant(tenantId, async (client) => {
       const session = await client.query<{ id: string }>(
@@ -144,9 +165,9 @@ export class CheckoutService {
       const order = await client.query<{ id: string }>(
         `INSERT INTO orders
            (tenant_id, cart_id, checkout_session_id, status, payment_status,
-            guest_email, customer_id, shipping_address, charge_currency, total_amount_minor,
-            access_token_hash)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11)
+            payment_method, guest_email, customer_id, shipping_address,
+            charge_currency, total_amount_minor, access_token_hash)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)
          RETURNING id`,
         [
           tenantId,
@@ -154,6 +175,7 @@ export class CheckoutService {
           sessionId,
           orderStatus,
           paymentStatus,
+          paymentMethod,
           input.customerId ? null : input.email,
           input.customerId ?? null,
           JSON.stringify(input.shippingAddress),
@@ -200,6 +222,7 @@ export class CheckoutService {
           id: orderId,
           status: orderStatus,
           paymentStatus,
+          paymentMethod,
           totalAmountMinor: total,
           currency,
           accessToken,
@@ -209,6 +232,8 @@ export class CheckoutService {
           status: payment.status,
           provider: payment.provider,
         },
+        bankTransferInstructions:
+          paymentMethod === 'bank_transfer' ? bankDetails : null,
       };
     });
   }

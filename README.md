@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order without charging, FastAPI address stub, storefront flow, merchant admin product CRUD + order fulfill/ship/cancel, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers.
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`), FastAPI address stub, storefront flow, merchant admin product CRUD + order fulfill/ship/cancel + payment settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**.
 
 ## Stack
 
@@ -27,7 +27,7 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
-# If the Postgres volume predates catalog/admin/auth SQL, re-apply idempotent init:
+# If the Postgres volume predates catalog/admin/auth/payments SQL, re-apply idempotent init:
 pnpm db:apply
 # Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
@@ -71,7 +71,7 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve/catalog admin/auth applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve/catalog admin/auth/payments applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
@@ -137,12 +137,59 @@ curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
 ### Guest / account checkout smoke
 
 ```bash
+pnpm db:apply                        # ensures payment settings seed
 pnpm --filter @ecom/api dev          # :3001
 # optional: cd apps/compute && uv run uvicorn app.main:app --port 8000
 pnpm --filter @ecom/storefront dev   # :3005 → /en
 ```
 
-Flow: home → Add to cart → cart → checkout (email + address) → order `placed` / `not_charged` (NoopAdapter). Optional: sign in as `customer@demo.localhost` first (guest cart attaches to the account). Placed orders show up under merchant **Orders** admin (below).
+Flow: home → Add to cart → cart → checkout (email + address + **payment method**) → order `placed` with `pending_cod` (COD) or `pending_transfer` (bank transfer + instructions). Optional: sign in as `customer@demo.localhost` first (guest cart attaches to the account). Placed orders show up under merchant **Orders** admin (below).
+
+```bash
+# Enabled methods for demo tenant
+curl -sS -H 'Host: demo.localhost' http://localhost:3001/v1/payments/methods
+```
+
+### Offline payments — COD + bank transfer (local)
+
+Pakistan-first offline methods via the `PaymentProvider` port (`CodAdapter` / `BankTransferAdapter`). Stripe Connect stub remains in the package but is **not** offered at checkout unless a tenant flips `stripeEnabled` (still not charged — stub only).
+
+```bash
+pnpm db:apply                       # 08-payment-methods.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/storefront dev  # :3005
+```
+
+1. Open http://localhost:3002/login — `owner@demo.localhost` / `DemoOwner123!`.
+2. Go to **Payments** — toggle COD and/or bank transfer; set account name, IBAN/account #, bank name.
+3. On the storefront checkout, pick **Cash on delivery** or **Bank transfer**.
+4. COD → order `payment_status=pending_cod`. Bank transfer → `pending_transfer` and transfer instructions on the confirmation screen.
+
+Admin API:
+
+```bash
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/payments/settings
+
+curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"codEnabled":true,"bankTransferEnabled":true,"bankAccountName":"Demo Merchant PK","bankAccountNumber":"PK36SCBL0000001123456702","bankName":"Demo Bank Pakistan","stripeEnabled":false}' \
+  http://localhost:3001/v1/admin/payments/settings
+```
+
+Checkout (guest cart token from `POST /v1/carts`):
+
+```bash
+curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -H "X-Cart-Token: $GUEST_TOKEN" \
+  -d '{"cartId":"'"$CART_ID"'","email":"guest@example.com","paymentMethod":"cod","shippingAddress":{"line1":"12 Clifton","city":"Karachi","country":"PK"}}' \
+  http://localhost:3001/v1/checkout/sessions
+```
 
 ### Merchant orders admin (local)
 
