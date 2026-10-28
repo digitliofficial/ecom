@@ -13,6 +13,7 @@ import { DomainsModule } from './domains/domains.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { LocalizationModule } from './localization/localization.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { CmsModule } from './cms/cms.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PrivacyModule } from './privacy/privacy.module';
     AnalyticsModule,
     LocalizationModule,
     PrivacyModule,
+    CmsModule,
   ],
 })
 export class AppModule {}

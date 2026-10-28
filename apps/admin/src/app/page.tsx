@@ -17,8 +17,9 @@ export default async function AdminHome() {
       <p style={{ marginTop: '1.5rem', maxWidth: 560 }}>
         Signed in as demo tenant staff. Manage catalog, orders (split
         fulfillments), offline payments, shipping methods, custom domains,
-        analytics ingest, privacy (cookie consent + DSAR), and localization
-        (multi-language / multi-currency).
+        analytics ingest, CMS (menus / SEO / theme / policies), privacy
+        (cookie consent + DSAR), and localization (multi-language /
+        multi-currency).
       </p>
       <ul style={{ marginTop: '1.25rem', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
         <li>
@@ -38,6 +39,9 @@ export default async function AdminHome() {
         </li>
         <li>
           <Link href="/analytics">Analytics</Link> — event totals dashboard stub
+        </li>
+        <li>
+          <Link href="/cms">CMS</Link> — menus, SEO, theme pack, policy pages
         </li>
         <li>
           <Link href="/privacy">Privacy</Link> — cookie banner, DPA, DSAR inbox

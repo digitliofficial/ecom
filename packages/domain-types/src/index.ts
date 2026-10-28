@@ -222,6 +222,26 @@ export type DsarRequest = {
   customerId?: string | null;
 };
 
+
+export type PolicyKind =
+  | 'privacy'
+  | 'refund'
+  | 'terms'
+  | 'shipping'
+  | 'cookie';
+
+export type MenuHandle = 'header' | 'footer';
+
+export type ThemeTokenOverrides = Partial<{
+  background: string;
+  foreground: string;
+  accent: string;
+  muted: string;
+  border: string;
+  displayFont: string;
+  bodyFont: string;
+}>;
+
 export type ProductStatus = 'active' | 'draft' | 'archived';
 
 export type Product = {

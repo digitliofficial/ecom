@@ -125,6 +125,117 @@ export type PaymentSettingsUpdate = {
   stripeEnabled?: boolean;
 };
 
+
+export type PolicyKind =
+  | 'privacy'
+  | 'refund'
+  | 'terms'
+  | 'shipping'
+  | 'cookie';
+
+export type MenuHandle = 'header' | 'footer';
+
+export type ThemeTokenOverrides = Partial<{
+  background: string;
+  foreground: string;
+  accent: string;
+  muted: string;
+  border: string;
+  displayFont: string;
+  bodyFont: string;
+}>;
+
+export type ThemeTokens = {
+  id: string;
+  name: string;
+  description: string;
+  colors: {
+    background: string;
+    foreground: string;
+    accent: string;
+    muted: string;
+    border: string;
+  };
+  fonts: {
+    display: string;
+    body: string;
+  };
+};
+
+export type ThemeSettings = {
+  themePackId: string;
+  tokenOverrides: ThemeTokenOverrides;
+  resolved: ThemeTokens;
+  updatedAt?: string;
+};
+
+export type ThemeSettingsUpdate = {
+  themePackId?: string;
+  tokenOverrides?: ThemeTokenOverrides | null;
+};
+
+export type SeoSettings = {
+  locale: string;
+  siteTitle: string;
+  metaDescription: string;
+  ogImageUrl: string | null;
+  updatedAt?: string;
+};
+
+export type SeoSettingsUpdate = {
+  locale?: string;
+  siteTitle?: string;
+  metaDescription?: string;
+  ogImageUrl?: string | null;
+};
+
+export type MenuItem = {
+  id?: string;
+  label: string;
+  href: string;
+  position: number;
+  locale: string | null;
+};
+
+export type Menu = {
+  handle: MenuHandle;
+  title: string;
+  items: MenuItem[];
+  updatedAt?: string;
+};
+
+export type MenuUpdateInput = {
+  title?: string;
+  items: Array<{
+    label: string;
+    href: string;
+    position?: number;
+    locale?: string | null;
+  }>;
+};
+
+export type Policy = {
+  kind: PolicyKind;
+  locale: string;
+  title: string;
+  body: string;
+  updatedAt?: string;
+};
+
+export type PolicyUpdateInput = {
+  locale?: string;
+  title?: string;
+  body?: string;
+};
+
+export type CmsBootstrap = {
+  locale: string;
+  theme: ThemeSettings;
+  seo: SeoSettings;
+  menus: { header: Menu; footer: Menu };
+  policies: Array<Pick<Policy, 'kind' | 'title' | 'locale'>>;
+};
+
 export type StorefrontShippingMethod = {
   id: string;
   name: string;
@@ -492,6 +603,16 @@ export class ApiClient {
     return this.parse<T>(res, 'PATCH', path);
   }
 
+  async put<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${this.opts.baseUrl}${path}`, {
+      method: 'PUT',
+      headers: this.headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+      credentials: this.credentials(),
+    });
+    return this.parse<T>(res, 'PUT', path);
+  }
+
   async delete<T>(path: string): Promise<T> {
     const res = await fetch(`${this.opts.baseUrl}${path}`, {
       method: 'DELETE',
@@ -777,6 +898,75 @@ export class ApiClient {
 
   getAdminDsar(id: string): Promise<DsarRequestDetail> {
     return this.get<DsarRequestDetail>(`/v1/admin/privacy/dsar/${id}`);
+  }
+
+  getCmsBootstrap(locale = 'en'): Promise<CmsBootstrap> {
+    return this.get<CmsBootstrap>(
+      `/v1/cms/bootstrap?locale=${encodeURIComponent(locale)}`,
+    );
+  }
+
+  getCmsPolicy(kind: PolicyKind, locale = 'en'): Promise<Policy> {
+    return this.get<Policy>(
+      `/v1/cms/policies/${encodeURIComponent(kind)}?locale=${encodeURIComponent(locale)}`,
+    );
+  }
+
+  listThemePacks(): Promise<ThemeTokens[]> {
+    return this.get<ThemeTokens[]>('/v1/admin/cms/theme-packs');
+  }
+
+  getAdminTheme(): Promise<ThemeSettings> {
+    return this.get<ThemeSettings>('/v1/admin/cms/theme');
+  }
+
+  updateAdminTheme(body: ThemeSettingsUpdate): Promise<ThemeSettings> {
+    return this.patch<ThemeSettings>('/v1/admin/cms/theme', body);
+  }
+
+  getAdminSeo(locale = 'en'): Promise<SeoSettings> {
+    return this.get<SeoSettings>(
+      `/v1/admin/cms/seo?locale=${encodeURIComponent(locale)}`,
+    );
+  }
+
+  updateAdminSeo(body: SeoSettingsUpdate): Promise<SeoSettings> {
+    return this.patch<SeoSettings>('/v1/admin/cms/seo', body);
+  }
+
+  getAdminMenu(handle: MenuHandle, locale = 'en'): Promise<Menu> {
+    return this.get<Menu>(
+      `/v1/admin/cms/menus/${encodeURIComponent(handle)}?locale=${encodeURIComponent(locale)}`,
+    );
+  }
+
+  replaceAdminMenu(handle: MenuHandle, body: MenuUpdateInput): Promise<Menu> {
+    return this.put<Menu>(
+      `/v1/admin/cms/menus/${encodeURIComponent(handle)}`,
+      body,
+    );
+  }
+
+  listAdminPolicies(locale = 'en'): Promise<Policy[]> {
+    return this.get<Policy[]>(
+      `/v1/admin/cms/policies?locale=${encodeURIComponent(locale)}`,
+    );
+  }
+
+  getAdminPolicy(kind: PolicyKind, locale = 'en'): Promise<Policy> {
+    return this.get<Policy>(
+      `/v1/admin/cms/policies/${encodeURIComponent(kind)}?locale=${encodeURIComponent(locale)}`,
+    );
+  }
+
+  updateAdminPolicy(
+    kind: PolicyKind,
+    body: PolicyUpdateInput,
+  ): Promise<Policy> {
+    return this.patch<Policy>(
+      `/v1/admin/cms/policies/${encodeURIComponent(kind)}`,
+      body,
+    );
   }
 }
 

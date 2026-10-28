@@ -16,6 +16,7 @@
     "@ecom/money": "workspace:*",
     "@ecom/payment-providers": "workspace:*",
     "@ecom/sdk-compute": "workspace:*",
+    "@ecom/themes": "workspace:*",
     "@nestjs/common": "^10.4.15",
     "@nestjs/core": "^10.4.15",
     "@nestjs/platform-express": "^10.4.15",

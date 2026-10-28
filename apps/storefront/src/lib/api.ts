@@ -4,7 +4,10 @@ import {
   createApiClient,
   type Cart,
   type CheckoutSessionResult,
+  type CmsBootstrap,
   type OfflinePaymentMethod,
+  type Policy,
+  type PolicyKind,
   type Product,
   type ShippingAddress,
   type StorefrontLocalization,
@@ -145,6 +148,18 @@ export async function listShippingMethods(
   paymentMethod?: OfflinePaymentMethod,
 ): Promise<StorefrontShippingMethod[]> {
   return client().listShippingMethods(paymentMethod);
+}
+
+
+export async function getCmsBootstrap(locale = 'en'): Promise<CmsBootstrap> {
+  return client().getCmsBootstrap(locale);
+}
+
+export async function getCmsPolicy(
+  kind: PolicyKind,
+  locale = 'en',
+): Promise<Policy> {
+  return client().getCmsPolicy(kind, locale);
 }
 
 export async function checkout(input: {
