@@ -177,9 +177,12 @@ function main() {
     applyViaPsql(files);
   }
 
-  console.log("OK — schema/seed/RLS/host resolve applied.");
+  console.log("OK — schema/seed/RLS/host resolve/catalog admin applied.");
   console.log(
     "Smoke: curl -sS -H 'x-tenant-host: demo.localhost' http://localhost:3001/v1/catalog/products",
+  );
+  console.log(
+    "Admin: curl -sS -H 'Host: demo.localhost' -H 'Authorization: Bearer stub-admin' http://localhost:3001/v1/admin/catalog/products",
   );
 }
 

@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest checkout slice** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order without charging, FastAPI address stub, storefront flow.
+**Phase 0 + guest checkout + merchant catalog admin** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order without charging, FastAPI address stub, storefront flow, and merchant admin product CRUD for the demo tenant.
 
 ## Stack
 
@@ -27,14 +27,15 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
-# If the Postgres volume predates guest-checkout init (catalog 500 /
-# missing resolve_tenant_id_by_host), upgrade schema+seed without wiping:
+# If the Postgres volume predates catalog/admin SQL, re-apply idempotent init:
 pnpm db:apply
 # Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
 # Dev (all apps) or filter
 pnpm dev
 # pnpm --filter @ecom/api dev
+# pnpm --filter @ecom/admin dev
+# pnpm --filter @ecom/storefront dev
 ```
 
 | Service | URL |
@@ -47,7 +48,7 @@ pnpm dev
 | Postgres | `localhost:5432` (`ecom` / `ecom`) |
 | Redis | `localhost:6379` |
 
-Demo tenant: slug `demo`, hosts `demo.localhost` / `localhost`. Isolation fixture: `other` / `other.localhost`. Storefront sends `X-Forwarded-Host: demo.localhost` (or use `x-tenant-host`).
+Demo tenant: slug `demo`, hosts `demo.localhost` / `localhost`. Isolation fixture: `other` / `other.localhost`.
 
 App DB user for RLS: `ecom_app` / `ecom` (see `.env.example`). Owner `ecom` bypasses RLS as superuser in Compose. Init SQL under `infra/docker/postgres/init/` runs only on **first** volume create.
 
@@ -78,9 +79,33 @@ Then re-check (any shell): `curl -sS -H 'x-tenant-host: demo.localhost' http://l
 
 ### Auth / passwords
 
-**Merchant admin (`:3002`) — local stub only.** Open `/login`, enter any non-empty email + password (no seed accounts). Submit sets a client cookie + `localStorage` flag (`ecom_admin_stub_session`) and redirects to the signed-in shell at `/`. Sign out clears the stub session. This is not real authentication.
+**No real app users yet.** Storefront is guest checkout (no login). Merchant admin uses a **stub login** (`Continue (stub)` / any non-empty email+password) that sets a cookie; API admin catalog calls send `Authorization: Bearer stub-admin` (Phase 0 stub — any non-empty Bearer works). Platform admin is a placeholder shell. Seeds create tenants/catalog only, not staff accounts. Local Postgres passwords above are the only credentials.
 
-Storefront is guest checkout (no login). Platform admin remains a placeholder shell. API `AuthService` accepts any non-empty Bearer token as a Phase 0 stub (returns `stub-user` / `staff`) — not real JWT verification. Seeds create tenants/catalog only, not staff accounts. Local Postgres passwords above are the only DB credentials.
+### Merchant catalog admin (local)
+
+```bash
+pnpm db:apply                       # ensures inventory_quantity + resolve_tenant helpers
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/storefront dev  # :3005 → /en
+```
+
+1. Open http://localhost:3002/login — enter any email + password → Continue (stub).
+2. Go to **Products** → **New product** — set title, slug, description, variant SKU, price (minor units + currency), inventory qty.
+3. Save with status `active`.
+4. Refresh the storefront at http://localhost:3005/en — the new product appears in the catalog (demo tenant).
+
+Admin API (Bearer required; host → demo tenant):
+
+```bash
+curl -sS -H 'Host: demo.localhost' -H 'Authorization: Bearer stub-admin' \
+  http://localhost:3001/v1/admin/catalog/products
+
+curl -sS -X POST -H 'Host: demo.localhost' -H 'Authorization: Bearer stub-admin' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"New Mug","slug":"new-mug","status":"active","variants":[{"title":"Default","sku":"MUG-NEW-01","unitAmountMinor":1800,"currency":"USD","inventoryQuantity":5}]}' \
+  http://localhost:3001/v1/admin/catalog/products
+```
 
 ### Guest checkout smoke
 
@@ -94,7 +119,7 @@ Flow: home → Add to cart → cart → checkout (email + address) → order `pl
 
 ## Workspace layout
 
-See [architecture](docs will live in Project Context) — apps under `apps/`, shared TS under `packages/`, Docker under `infra/docker/`.
+See architecture docs in the Digitli Project Hub Context — apps under `apps/`, shared TS under `packages/`, Docker under `infra/docker/`.
 
 ## Scripts
 

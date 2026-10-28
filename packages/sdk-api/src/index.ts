@@ -34,18 +34,47 @@ export type Cart = {
   lines: CartLine[];
 };
 
+export type ProductVariant = {
+  id: string;
+  sku: string;
+  title: string;
+  unitAmountMinor: number;
+  currency: string;
+  inventoryQuantity: number;
+};
+
 export type Product = {
   id: string;
   slug: string;
   title: string;
   description: string | null;
-  variants: Array<{
-    id: string;
-    sku: string;
-    title: string;
-    unitAmountMinor: number;
-    currency: string;
-  }>;
+  status: string;
+  variants: ProductVariant[];
+};
+
+export type VariantInput = {
+  id?: string;
+  sku: string;
+  title: string;
+  unitAmountMinor: number;
+  currency?: string;
+  inventoryQuantity?: number;
+};
+
+export type ProductCreateInput = {
+  title: string;
+  slug: string;
+  description?: string | null;
+  status?: string;
+  variants: VariantInput[];
+};
+
+export type ProductUpdateInput = {
+  title?: string;
+  slug?: string;
+  description?: string | null;
+  status?: string;
+  variants?: VariantInput[];
 };
 
 export type CheckoutSessionResult = {
@@ -88,6 +117,15 @@ export class ApiClient {
     return headers;
   }
 
+  private async parse<T>(res: Response, method: string, path: string): Promise<T> {
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`${method} ${path} failed: ${res.status} ${text}`);
+    }
+    if (res.status === 204) return undefined as T;
+    return res.json() as Promise<T>;
+  }
+
   async health(): Promise<{ status: string }> {
     const res = await fetch(`${this.opts.baseUrl}/health`);
     if (!res.ok) throw new Error(`health failed: ${res.status}`);
@@ -98,8 +136,7 @@ export class ApiClient {
     const res = await fetch(`${this.opts.baseUrl}${path}`, {
       headers: this.headers(),
     });
-    if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
-    return res.json() as Promise<T>;
+    return this.parse<T>(res, 'GET', path);
   }
 
   async post<T>(path: string, body: unknown): Promise<T> {
@@ -108,11 +145,7 @@ export class ApiClient {
       headers: this.headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`POST ${path} failed: ${res.status} ${text}`);
-    }
-    return res.json() as Promise<T>;
+    return this.parse<T>(res, 'POST', path);
   }
 
   async patch<T>(path: string, body: unknown): Promise<T> {
@@ -121,8 +154,7 @@ export class ApiClient {
       headers: this.headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`PATCH ${path} failed: ${res.status}`);
-    return res.json() as Promise<T>;
+    return this.parse<T>(res, 'PATCH', path);
   }
 
   async delete<T>(path: string): Promise<T> {
@@ -130,12 +162,27 @@ export class ApiClient {
       method: 'DELETE',
       headers: this.headers(),
     });
-    if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
-    return res.json() as Promise<T>;
+    return this.parse<T>(res, 'DELETE', path);
   }
 
   listProducts(): Promise<Product[]> {
     return this.get<Product[]>('/v1/catalog/products');
+  }
+
+  listAdminProducts(): Promise<Product[]> {
+    return this.get<Product[]>('/v1/admin/catalog/products');
+  }
+
+  getAdminProduct(id: string): Promise<Product> {
+    return this.get<Product>(`/v1/admin/catalog/products/${id}`);
+  }
+
+  createAdminProduct(body: ProductCreateInput): Promise<Product> {
+    return this.post<Product>('/v1/admin/catalog/products', body);
+  }
+
+  updateAdminProduct(id: string, body: ProductUpdateInput): Promise<Product> {
+    return this.patch<Product>(`/v1/admin/catalog/products/${id}`, body);
   }
 
   createCart(body?: { locale?: string; currency?: string }): Promise<Cart> {
