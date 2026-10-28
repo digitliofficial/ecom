@@ -7,10 +7,12 @@ import {
   type OfflinePaymentMethod,
   type Product,
   type ShippingAddress,
+  type StorefrontLocalization,
   type StorefrontPaymentMethod,
   type StorefrontShippingMethod,
 } from '@ecom/sdk-api';
 import { readCustomerBearer } from './customer-session';
+import { readDisplayCurrency } from './display-currency';
 
 const CART_TOKEN_KEY = 'ecom_guest_cart';
 
@@ -79,10 +81,29 @@ export async function fetchCurrentCart(): Promise<Cart | null> {
   return cart;
 }
 
-export async function ensureCart(): Promise<Cart> {
+export async function getStorefrontLocalization(): Promise<StorefrontLocalization> {
+  return client().getStorefrontLocalization();
+}
+
+export async function ensureCart(opts?: {
+  locale?: string;
+  currency?: string;
+}): Promise<Cart> {
   const existing = await fetchCurrentCart();
   if (existing) return existing;
-  const cart = await client().createCart({ locale: 'en', currency: 'USD' });
+  let locale = opts?.locale;
+  let currency = opts?.currency ?? readDisplayCurrency();
+  if (!locale || !currency) {
+    try {
+      const loc = await getStorefrontLocalization();
+      locale ??= loc.defaultLocale;
+      currency ??= loc.defaultCurrency;
+    } catch {
+      locale ??= 'en';
+      currency ??= 'USD';
+    }
+  }
+  const cart = await client().createCart({ locale, currency });
   writeCartToken(cart.guestToken);
   return cart;
 }

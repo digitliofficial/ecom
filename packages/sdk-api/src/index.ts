@@ -203,6 +203,43 @@ export type AnalyticsSummary = {
   stub: true;
 };
 
+export type TenantLocalizationSettings = {
+  defaultLocale: string;
+  defaultCurrency: string;
+  multiLanguage: boolean;
+  multiCurrency: boolean;
+  enabledLocales: string[];
+  enabledCurrencies: string[];
+  availableLocales: string[];
+  availableCurrencies: string[];
+  maxLocales: number;
+  maxCurrencies: number;
+  fxRounding: string;
+  fxDisclaimer: string | null;
+  updatedAt?: string;
+};
+
+export type LocalizationSettingsUpdate = {
+  defaultLocale?: string;
+  defaultCurrency?: string;
+  multiLanguage?: boolean;
+  multiCurrency?: boolean;
+  enabledLocales?: string[];
+  enabledCurrencies?: string[];
+  fxRounding?: string;
+  fxDisclaimer?: string | null;
+};
+
+export type StorefrontLocalization = {
+  defaultLocale: string;
+  defaultCurrency: string;
+  multiLanguage: boolean;
+  multiCurrency: boolean;
+  locales: string[];
+  currencies: string[];
+  fxDisclaimer: string | null;
+};
+
 export type CheckoutSessionResult = {
   id: string;
   cartId: string;
@@ -520,6 +557,25 @@ export class ApiClient {
   ): Promise<TenantPaymentSettings> {
     return this.patch<TenantPaymentSettings>(
       '/v1/admin/payments/settings',
+      body,
+    );
+  }
+
+  getStorefrontLocalization(): Promise<StorefrontLocalization> {
+    return this.get<StorefrontLocalization>('/v1/localization');
+  }
+
+  getAdminLocalizationSettings(): Promise<TenantLocalizationSettings> {
+    return this.get<TenantLocalizationSettings>(
+      '/v1/admin/localization/settings',
+    );
+  }
+
+  updateAdminLocalizationSettings(
+    body: LocalizationSettingsUpdate,
+  ): Promise<TenantLocalizationSettings> {
+    return this.patch<TenantLocalizationSettings>(
+      '/v1/admin/localization/settings',
       body,
     );
   }

@@ -14,7 +14,20 @@ export const en: MessageCatalog = {
   'common.loading': 'Loading…',
 };
 
-export const catalogs: Record<string, MessageCatalog> = { en };
+/** Urdu sample catalog for multi-language demos */
+export const ur: MessageCatalog = {
+  'cart.title': 'آپ کی ٹوکری',
+  'cart.empty': 'ٹوکری خالی ہے۔',
+  'checkout.title': 'چیک آؤٹ',
+  'checkout.email': 'ای میل',
+  'checkout.place': 'آرڈر کریں',
+  'checkout.placed': 'آرڈر ہو گیا',
+  'catalog.add': 'ٹوکری میں شامل کریں',
+  'admin.login': 'سائن ان',
+  'common.loading': 'لوڈ ہو رہا ہے…',
+};
+
+export const catalogs: Record<string, MessageCatalog> = { en, ur };
 
 export function t(locale: string, key: string): string {
   return catalogs[locale]?.[key] ?? catalogs.en?.[key] ?? key;

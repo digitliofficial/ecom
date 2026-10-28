@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { TenantGuard, type TenantRequest } from '../tenancy/tenant.guard';
+import { LocalizationService } from '../localization/localization.service';
 import { CartService } from './cart.service';
 import {
   guestCartCookie,
@@ -23,7 +24,10 @@ import {
 @Controller('carts')
 @UseGuards(TenantGuard)
 export class CartController {
-  constructor(private readonly carts: CartService) {}
+  constructor(
+    private readonly carts: CartService,
+    private readonly localization: LocalizationService,
+  ) {}
 
   @Post()
   async create(
@@ -31,10 +35,11 @@ export class CartController {
     @Res({ passthrough: true }) res: Response,
     @Body() body?: { locale?: string; currency?: string },
   ) {
-    const cart = await this.carts.createGuestCart(req.tenantId!, {
+    const prefs = await this.localization.resolveCartPrefs(req.tenantId!, {
       locale: body?.locale,
       currency: body?.currency,
     });
+    const cart = await this.carts.createGuestCart(req.tenantId!, prefs);
     res.setHeader('Set-Cookie', guestCartCookie(cart.guestToken));
     return cart;
   }
