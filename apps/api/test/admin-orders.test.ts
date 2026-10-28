@@ -80,6 +80,7 @@ describe('admin orders', () => {
       .send({
         cartId,
         email,
+        paymentMethod: 'cod',
         shippingAddress: {
           line1: '1 Demo St',
           city: 'Demo City',

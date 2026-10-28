@@ -75,6 +75,8 @@ export type OrderLine = {
   qtyFulfilled: number;
 };
 
+export type OfflinePaymentMethod = 'cod' | 'bank_transfer';
+
 export type Order = {
   id: string;
   tenantId: string;
@@ -82,6 +84,7 @@ export type Order = {
   checkoutSessionId?: string | null;
   status: OrderStatus;
   paymentStatus: string;
+  paymentMethod?: OfflinePaymentMethod | string | null;
   guestEmail?: string | null;
   customerId?: string | null;
   totalAmountMinor: number;
@@ -90,6 +93,15 @@ export type Order = {
   createdAt?: string;
   updatedAt?: string;
   lines?: OrderLine[];
+};
+
+export type TenantPaymentSettings = {
+  codEnabled: boolean;
+  bankTransferEnabled: boolean;
+  bankAccountName?: string | null;
+  bankAccountNumber?: string | null;
+  bankName?: string | null;
+  stripeEnabled: boolean;
 };
 
 export type ProductStatus = 'active' | 'draft' | 'archived';

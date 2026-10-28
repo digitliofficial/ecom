@@ -4,8 +4,10 @@ import {
   createApiClient,
   type Cart,
   type CheckoutSessionResult,
+  type OfflinePaymentMethod,
   type Product,
   type ShippingAddress,
+  type StorefrontPaymentMethod,
 } from '@ecom/sdk-api';
 import { readCustomerBearer } from './customer-session';
 
@@ -113,15 +115,21 @@ export async function removeCartLine(
   return updated;
 }
 
+export async function listPaymentMethods(): Promise<StorefrontPaymentMethod[]> {
+  return client().listPaymentMethods();
+}
+
 export async function checkout(input: {
   email: string;
   shippingAddress: ShippingAddress;
+  paymentMethod: OfflinePaymentMethod;
 }): Promise<CheckoutSessionResult> {
   const cart = await ensureCart();
   const result = await client().createCheckoutSession({
     cartId: cart.id,
     email: input.email,
     shippingAddress: input.shippingAddress,
+    paymentMethod: input.paymentMethod,
   });
   clearCartToken();
   return result;

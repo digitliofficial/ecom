@@ -7,9 +7,11 @@ import {
   type AdminOrderSummary,
   type AuthResult,
   type AuthUser,
+  type PaymentSettingsUpdate,
   type Product,
   type ProductCreateInput,
   type ProductUpdateInput,
+  type TenantPaymentSettings,
 } from '@ecom/sdk-api';
 import {
   clearStaffBearer,
@@ -90,6 +92,16 @@ export async function updateAdminOrderStatus(
   status: AdminOrderStatusUpdate,
 ): Promise<AdminOrderDetail> {
   return client().updateAdminOrderStatus(id, { status });
+}
+
+export async function getAdminPaymentSettings(): Promise<TenantPaymentSettings> {
+  return client().getAdminPaymentSettings();
+}
+
+export async function updateAdminPaymentSettings(
+  body: PaymentSettingsUpdate,
+): Promise<TenantPaymentSettings> {
+  return client().updateAdminPaymentSettings(body);
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {

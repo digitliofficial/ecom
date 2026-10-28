@@ -90,7 +90,10 @@ export function OrderDetail({ initial }: OrderDetailProps) {
         </div>
         <div>
           <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Payment</dt>
-          <dd style={{ margin: 0 }}>{order.paymentStatus}</dd>
+          <dd style={{ margin: 0 }}>
+            {order.paymentMethod ? `${order.paymentMethod} · ` : null}
+            {order.paymentStatus}
+          </dd>
         </div>
         <div>
           <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Created</dt>

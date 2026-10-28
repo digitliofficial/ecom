@@ -31,6 +31,7 @@ export type OrderSummaryDto = {
   id: string;
   status: OrderStatus;
   paymentStatus: string;
+  paymentMethod: string | null;
   guestEmail: string | null;
   customerId: string | null;
   totalAmountMinor: number;
@@ -61,6 +62,7 @@ type OrderRow = {
   id: string;
   status: string;
   payment_status: string;
+  payment_method: string | null;
   guest_email: string | null;
   customer_id: string | null;
   cart_id: string | null;
@@ -99,7 +101,7 @@ export class OrdersService {
   async listAdminOrders(tenantId: string): Promise<OrderSummaryDto[]> {
     return this.db.withTenant(tenantId, async (client) => {
       const res = await client.query<OrderRow>(
-        `SELECT o.id, o.status, o.payment_status, o.guest_email, o.customer_id,
+        `SELECT o.id, o.status, o.payment_status, o.payment_method, o.guest_email, o.customer_id,
                 o.cart_id, o.checkout_session_id, o.shipping_address,
                 o.total_amount_minor, o.charge_currency, o.created_at, o.updated_at,
                 COALESCE(COUNT(ol.id), 0) AS line_count
@@ -188,7 +190,7 @@ export class OrdersService {
     id: string,
   ): Promise<OrderRow | null> {
     const res = await client.query<OrderRow>(
-      `SELECT id, status, payment_status, guest_email, customer_id,
+      `SELECT id, status, payment_status, payment_method, guest_email, customer_id,
               cart_id, checkout_session_id, shipping_address,
               total_amount_minor, charge_currency, created_at, updated_at
        FROM orders
@@ -227,6 +229,7 @@ export class OrdersService {
       id: row.id,
       status: row.status as OrderStatus,
       paymentStatus: row.payment_status,
+      paymentMethod: row.payment_method,
       guestEmail: row.guest_email,
       customerId: row.customer_id,
       totalAmountMinor: asMinor(row.total_amount_minor),

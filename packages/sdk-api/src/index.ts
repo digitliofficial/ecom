@@ -94,6 +94,37 @@ export type AuthResult = {
   token: string;
 };
 
+export type OfflinePaymentMethod = 'cod' | 'bank_transfer';
+
+export type BankDetails = {
+  accountName: string;
+  accountNumber: string;
+  bankName: string;
+};
+
+export type StorefrontPaymentMethod =
+  | { id: 'cod'; label: string }
+  | { id: 'bank_transfer'; label: string; bankDetails: BankDetails };
+
+export type TenantPaymentSettings = {
+  codEnabled: boolean;
+  bankTransferEnabled: boolean;
+  bankAccountName: string | null;
+  bankAccountNumber: string | null;
+  bankName: string | null;
+  stripeEnabled: boolean;
+  updatedAt?: string;
+};
+
+export type PaymentSettingsUpdate = {
+  codEnabled?: boolean;
+  bankTransferEnabled?: boolean;
+  bankAccountName?: string | null;
+  bankAccountNumber?: string | null;
+  bankName?: string | null;
+  stripeEnabled?: boolean;
+};
+
 export type CheckoutSessionResult = {
   id: string;
   cartId: string;
@@ -110,11 +141,13 @@ export type CheckoutSessionResult = {
     id: string;
     status: string;
     paymentStatus: string;
+    paymentMethod: OfflinePaymentMethod | string;
     totalAmountMinor: number;
     currency: string;
     accessToken: string;
   };
   payment: { id: string; status: string; provider: string };
+  bankTransferInstructions: BankDetails | null;
 };
 
 export type AdminOrderStatus =
@@ -142,6 +175,7 @@ export type AdminOrderSummary = {
   id: string;
   status: AdminOrderStatus;
   paymentStatus: string;
+  paymentMethod: string | null;
   guestEmail: string | null;
   customerId: string | null;
   totalAmountMinor: number;
@@ -309,12 +343,30 @@ export class ApiClient {
     return this.delete<Cart>(`/v1/carts/${cartId}/lines/${lineId}`);
   }
 
+  listPaymentMethods(): Promise<StorefrontPaymentMethod[]> {
+    return this.get<StorefrontPaymentMethod[]>('/v1/payments/methods');
+  }
+
   createCheckoutSession(body: {
     cartId?: string;
     email: string;
     shippingAddress: ShippingAddress;
+    paymentMethod: OfflinePaymentMethod;
   }): Promise<CheckoutSessionResult> {
     return this.post<CheckoutSessionResult>('/v1/checkout/sessions', body);
+  }
+
+  getAdminPaymentSettings(): Promise<TenantPaymentSettings> {
+    return this.get<TenantPaymentSettings>('/v1/admin/payments/settings');
+  }
+
+  updateAdminPaymentSettings(
+    body: PaymentSettingsUpdate,
+  ): Promise<TenantPaymentSettings> {
+    return this.patch<TenantPaymentSettings>(
+      '/v1/admin/payments/settings',
+      body,
+    );
   }
 
   listAdminOrders(): Promise<AdminOrderSummary[]> {

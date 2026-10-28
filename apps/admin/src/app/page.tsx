@@ -16,7 +16,8 @@ export default async function AdminHome() {
     <AdminShell email={email}>
       <p style={{ marginTop: '1.5rem', maxWidth: 480 }}>
         Signed in as demo tenant staff. Manage catalog under Products, fulfill
-        guest checkout orders under Orders; Localization remains a settings shell.
+        guest checkout orders under Orders, and toggle COD / bank transfer under
+        Payments; Localization remains a settings shell.
       </p>
       <ul style={{ marginTop: '1.25rem', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
         <li>
@@ -24,6 +25,9 @@ export default async function AdminHome() {
         </li>
         <li>
           <Link href="/orders">Orders</Link> — list / detail / fulfill · ship · cancel
+        </li>
+        <li>
+          <Link href="/payments">Payments</Link> — COD + bank transfer settings
         </li>
         <li>
           <Link href="/localization">Localization</Link> — locale &amp; currency shell
