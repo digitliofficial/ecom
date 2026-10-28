@@ -58,6 +58,14 @@ describe('Localization settings + storefront config', () => {
   it.skipIf(!hasDb)('staff can enable multi-language and locales', async () => {
     expect(staffToken).toBeTruthy();
 
+    // Starter hard-caps languages at 1 — bump to Growth for multi-locale exercise.
+    await request(server)
+      .post('/v1/admin/billing/change-plan')
+      .set('Host', DEMO_HOST)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ planCode: 'growth' })
+      .expect(201);
+
     const before = await request(server)
       .get('/v1/admin/localization/settings')
       .set('Host', DEMO_HOST)
@@ -116,6 +124,13 @@ describe('Localization settings + storefront config', () => {
         defaultCurrency: 'USD',
       })
       .expect(200);
+
+    await request(server)
+      .post('/v1/admin/billing/change-plan')
+      .set('Host', DEMO_HOST)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ planCode: 'starter' })
+      .expect(201);
   });
 
   it.skipIf(!hasDb)('rejects enabling more locales than plan cap', async () => {

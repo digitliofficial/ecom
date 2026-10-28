@@ -18,10 +18,16 @@ import {
   type LocalizationSettingsUpdate,
   type NotificationSettingsUpdate,
   type PaymentSettingsUpdate,
+  type PlanView,
   type PrivacySettingsUpdate,
   type Product,
   type ProductCreateInput,
   type ProductUpdateInput,
+  type SoftLimitWarning,
+  type StaffMember,
+  type StripeBillingStubResult,
+  type TenantBillingSnapshot,
+  type TenantLocale,
   type ShippingMethod,
   type ShippingMethodCreate,
   type ShippingMethodUpdate,
@@ -45,6 +51,17 @@ import {
   readStaffBearer,
   setStaffBearer,
 } from './auth-session';
+
+export type {
+  PlanView,
+  SoftLimitWarning,
+  StaffMember,
+  StripeBillingStubResult,
+  TenantBillingSnapshot,
+  TenantLocale,
+};
+
+export { ApiError } from '@ecom/sdk-api';
 
 export function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -284,6 +301,62 @@ export async function updateAdminPolicy(
   body: PolicyUpdateInput,
 ): Promise<Policy> {
   return client().updateAdminPolicy(kind, body);
+}
+
+
+export async function getBillingUsage(): Promise<TenantBillingSnapshot> {
+  return client().getBillingUsage();
+}
+
+export async function listBillingPlans(): Promise<PlanView[]> {
+  return client().listBillingPlans();
+}
+
+export async function changeBillingPlan(
+  planCode: string,
+): Promise<TenantBillingSnapshot> {
+  return client().changeBillingPlan({ planCode });
+}
+
+export async function createStripeBillingCheckout(input: {
+  planCode: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<StripeBillingStubResult> {
+  return client().createStripeBillingCheckout(input);
+}
+
+export async function createStripeBillingPortal(
+  returnUrl: string,
+): Promise<StripeBillingStubResult> {
+  return client().createStripeBillingPortal({ returnUrl });
+}
+
+export async function listStaffMembers(): Promise<StaffMember[]> {
+  return client().listStaffMembers();
+}
+
+export async function inviteStaffMember(input: {
+  email: string;
+  password: string;
+  displayName?: string;
+  role?: string;
+}): Promise<Omit<StaffMember, 'createdAt'>> {
+  return client().inviteStaffMember(input);
+}
+
+export async function listTenantLocales(): Promise<TenantLocale[]> {
+  return client().listTenantLocales();
+}
+
+export async function enableTenantLocale(locale: string): Promise<TenantLocale> {
+  return client().enableTenantLocale({ locale });
+}
+
+export async function disableTenantLocale(
+  locale: string,
+): Promise<{ ok: boolean }> {
+  return client().disableTenantLocale(locale);
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {

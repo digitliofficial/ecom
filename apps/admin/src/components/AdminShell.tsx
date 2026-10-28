@@ -43,6 +43,8 @@ export function AdminShell({ email, children }: AdminShellProps) {
           <Link href="/privacy">Privacy</Link>
           <Link href="/notifications">Notifications</Link>
           <Link href="/localization">Localization</Link>
+          <Link href="/staff">Staff</Link>
+          <Link href="/plans">Plans</Link>
           <span style={{ opacity: 0.75, fontSize: '0.85rem' }}>{email}</span>
           <button
             type="button"

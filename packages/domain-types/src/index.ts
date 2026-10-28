@@ -310,3 +310,24 @@ export type UrlRedirect = {
   toPath: string;
   statusCode: number;
 };
+
+/** SaaS plan metering */
+
+export type PlanCode = 'starter' | 'growth' | 'advanced' | string;
+
+export type PlanEntitlementKey =
+  | 'max_products'
+  | 'max_staff'
+  | 'max_locales'
+  | 'soft_max_orders_month'
+  | 'feature_b2b'
+  | string;
+
+export type TenantSubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'incomplete';
+
+export type UsageMetric = 'products' | 'staff' | 'locales' | 'orders_month';
