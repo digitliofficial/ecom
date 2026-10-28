@@ -30,6 +30,7 @@ cp .env.example .env
 # If the Postgres volume predates guest-checkout init (catalog 500 /
 # missing resolve_tenant_id_by_host), upgrade schema+seed without wiping:
 pnpm db:apply
+# Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
 # Dev (all apps) or filter
 pnpm dev
@@ -62,7 +63,18 @@ pnpm db:apply
 docker compose down -v && docker compose up -d
 ```
 
-Then re-check: `curl -sS -H 'x-tenant-host: demo.localhost' http://localhost:3001/v1/catalog/products`
+`pnpm db:apply` runs `node scripts/db-apply.mjs` (not bash), so it works in **Windows PowerShell**, cmd, macOS, and Linux. It applies every `infra/docker/postgres/init/*.sql` via `docker compose exec` when `ecom-postgres` is up, otherwise via local `psql` (`DATABASE_URL_ADMIN` or `postgresql://ecom:ecom@localhost:5432/ecom`).
+
+**Windows PowerShell verify**
+
+```powershell
+docker compose up -d
+pnpm db:apply
+# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve applied."
+curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
+```
+
+Then re-check (any shell): `curl -sS -H 'x-tenant-host: demo.localhost' http://localhost:3001/v1/catalog/products`
 
 ### Auth / passwords
 
@@ -87,6 +99,7 @@ See [architecture](docs will live in Project Context) — apps under `apps/`, sh
 ## Scripts
 
 - `pnpm build` / `lint` / `test` / `typecheck` — Turborepo pipelines
+- `pnpm db:apply` — re-apply idempotent Postgres init SQL (Node; Windows-safe)
 - Python compute: `cd apps/compute && uv sync && uv run pytest`
 
 ## Docs
