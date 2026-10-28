@@ -7,6 +7,7 @@ import {
   type Product,
   type ShippingAddress,
 } from '@ecom/sdk-api';
+import { readCustomerBearer } from './customer-session';
 
 const CART_TOKEN_KEY = 'ecom_guest_cart';
 
@@ -42,6 +43,8 @@ function client() {
     baseUrl: getApiBaseUrl(),
     getHost: getTenantHost,
     getCartToken: readCartToken,
+    getToken: () => readCustomerBearer(),
+    credentials: 'include',
   });
 }
 
@@ -52,12 +55,16 @@ export async function listProducts(): Promise<Product[]> {
 export async function fetchCurrentCart(): Promise<Cart | null> {
   const token = readCartToken();
   if (!token) return null;
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Forwarded-Host': getTenantHost(),
+    'X-Cart-Token': token,
+  };
+  const bearer = readCustomerBearer();
+  if (bearer) headers.Authorization = `Bearer ${bearer}`;
   const res = await fetch(`${getApiBaseUrl()}/v1/carts/current`, {
-    headers: {
-      Accept: 'application/json',
-      'X-Forwarded-Host': getTenantHost(),
-      'X-Cart-Token': token,
-    },
+    headers,
+    credentials: 'include',
   });
   if (res.status === 404) {
     clearCartToken();

@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest checkout + merchant catalog admin** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order without charging, FastAPI address stub, storefront flow, and merchant admin product CRUD for the demo tenant.
+**Phase 0 + guest/account checkout + merchant catalog admin + real auth** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order without charging, FastAPI address stub, storefront flow, merchant admin product CRUD, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers.
 
 ## Stack
 
@@ -27,7 +27,7 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
-# If the Postgres volume predates catalog/admin SQL, re-apply idempotent init:
+# If the Postgres volume predates catalog/admin/auth SQL, re-apply idempotent init:
 pnpm db:apply
 # Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
@@ -71,43 +71,70 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve/catalog admin applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve/catalog admin/auth applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
 Then re-check (any shell): `curl -sS -H 'x-tenant-host: demo.localhost' http://localhost:3001/v1/catalog/products`
 
-### Auth / passwords
+### Auth / demo credentials
 
-**No real app users yet.** Storefront is guest checkout (no login). Merchant admin uses a **stub login** (`Continue (stub)` / any non-empty email+password) that sets a cookie; API admin catalog calls send `Authorization: Bearer stub-admin` (Phase 0 stub — any non-empty Bearer works). Platform admin is a placeholder shell. Seeds create tenants/catalog only, not staff accounts. Local Postgres passwords above are the only credentials.
+Passwords are bcrypt-hashed in Nest. Sessions are JWT in httpOnly cookies (`ecom_staff_session` / `ecom_customer_session`); Bearer tokens from login responses also work for API clients.
+
+| Actor | Email | Password |
+|---|---|---|
+| Merchant owner (demo tenant) | `owner@demo.localhost` | `DemoOwner123!` |
+| Customer (optional demo) | `customer@demo.localhost` | `DemoCustomer123!` |
+| Postgres app role | `ecom_app` | `ecom` |
+| Postgres owner | `ecom` | `ecom` |
+
+Set `JWT_SECRET` in `.env` (see `.env.example`). Empty local secret falls back to a fixed dev value — change before any shared deploy.
+
+```bash
+# Staff login → cookie + token
+curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login
+
+# Customer login
+curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"customer@demo.localhost","password":"DemoCustomer123!"}' \
+  http://localhost:3001/v1/auth/customer/login
+```
+
+Admin middleware requires the staff session cookie. Storefront keeps **guest checkout**; header **Account login / register** uses the customer path and links the current guest cart on login/register.
 
 ### Merchant catalog admin (local)
 
 ```bash
-pnpm db:apply                       # ensures inventory_quantity + resolve_tenant helpers
+pnpm db:apply                       # ensures inventory + auth seed
 pnpm --filter @ecom/api dev         # :3001
 pnpm --filter @ecom/admin dev       # :3002
 pnpm --filter @ecom/storefront dev  # :3005 → /en
 ```
 
-1. Open http://localhost:3002/login — enter any email + password → Continue (stub).
+1. Open http://localhost:3002/login — sign in as `owner@demo.localhost` / `DemoOwner123!`.
 2. Go to **Products** → **New product** — set title, slug, description, variant SKU, price (minor units + currency), inventory qty.
 3. Save with status `active`.
 4. Refresh the storefront at http://localhost:3005/en — the new product appears in the catalog (demo tenant).
 
-Admin API (Bearer required; host → demo tenant):
+Admin API (staff JWT required; host → demo tenant):
 
 ```bash
-curl -sS -H 'Host: demo.localhost' -H 'Authorization: Bearer stub-admin' \
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
   http://localhost:3001/v1/admin/catalog/products
 
-curl -sS -X POST -H 'Host: demo.localhost' -H 'Authorization: Bearer stub-admin' \
+curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"title":"New Mug","slug":"new-mug","status":"active","variants":[{"title":"Default","sku":"MUG-NEW-01","unitAmountMinor":1800,"currency":"USD","inventoryQuantity":5}]}' \
   http://localhost:3001/v1/admin/catalog/products
 ```
 
-### Guest checkout smoke
+### Guest / account checkout smoke
 
 ```bash
 pnpm --filter @ecom/api dev          # :3001
@@ -115,7 +142,7 @@ pnpm --filter @ecom/api dev          # :3001
 pnpm --filter @ecom/storefront dev   # :3005 → /en
 ```
 
-Flow: home → Add to cart → cart → checkout (email + address) → order `placed` / `not_charged` (NoopAdapter).
+Flow: home → Add to cart → cart → checkout (email + address) → order `placed` / `not_charged` (NoopAdapter). Optional: sign in as `customer@demo.localhost` first (guest cart attaches to the account).
 
 ## Workspace layout
 

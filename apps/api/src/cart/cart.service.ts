@@ -21,6 +21,7 @@ export type CartDto = {
   tenantId: string;
   status: string;
   guestToken: string;
+  customerId: string | null;
   email: string | null;
   locale: string | null;
   chargeCurrency: string | null;
@@ -42,13 +43,14 @@ export class CartService {
         tenant_id: string;
         status: string;
         guest_token: string;
+        customer_id: string | null;
         email: string | null;
         locale: string | null;
         charge_currency: string | null;
       }>(
         `INSERT INTO carts (tenant_id, status, guest_token, locale, charge_currency, display_currency)
          VALUES ($1, 'active', $2, $3, $4, $4)
-         RETURNING id, tenant_id, status, guest_token, email, locale, charge_currency`,
+         RETURNING id, tenant_id, status, guest_token, customer_id, email, locale, charge_currency`,
         [
           tenantId,
           guestToken,
@@ -62,6 +64,7 @@ export class CartService {
         tenantId: row.tenant_id,
         status: row.status,
         guestToken: row.guest_token,
+        customerId: row.customer_id,
         email: row.email,
         locale: row.locale,
         chargeCurrency: row.charge_currency,
@@ -80,11 +83,12 @@ export class CartService {
         tenant_id: string;
         status: string;
         guest_token: string;
+        customer_id: string | null;
         email: string | null;
         locale: string | null;
         charge_currency: string | null;
       }>(
-        `SELECT id, tenant_id, status, guest_token, email, locale, charge_currency
+        `SELECT id, tenant_id, status, guest_token, customer_id, email, locale, charge_currency
          FROM carts WHERE guest_token = $1 AND status = 'active' LIMIT 1`,
         [guestToken],
       );
@@ -100,11 +104,12 @@ export class CartService {
         tenant_id: string;
         status: string;
         guest_token: string;
+        customer_id: string | null;
         email: string | null;
         locale: string | null;
         charge_currency: string | null;
       }>(
-        `SELECT id, tenant_id, status, guest_token, email, locale, charge_currency
+        `SELECT id, tenant_id, status, guest_token, customer_id, email, locale, charge_currency
          FROM carts WHERE id = $1 LIMIT 1`,
         [cartId],
       );
@@ -240,6 +245,7 @@ export class CartService {
     tenant_id: string;
     status: string;
     guest_token: string;
+    customer_id: string | null;
     email: string | null;
     locale: string | null;
     charge_currency: string | null;
@@ -249,11 +255,12 @@ export class CartService {
       tenant_id: string;
       status: string;
       guest_token: string;
+      customer_id: string | null;
       email: string | null;
       locale: string | null;
       charge_currency: string | null;
     }>(
-      `SELECT id, tenant_id, status, guest_token, email, locale, charge_currency
+      `SELECT id, tenant_id, status, guest_token, customer_id, email, locale, charge_currency
        FROM carts WHERE id = $1 AND status = 'active' LIMIT 1`,
       [cartId],
     );
@@ -268,6 +275,7 @@ export class CartService {
       tenant_id: string;
       status: string;
       guest_token: string;
+      customer_id: string | null;
       email: string | null;
       locale: string | null;
       charge_currency: string | null;
@@ -294,6 +302,7 @@ export class CartService {
       tenantId: row.tenant_id,
       status: row.status,
       guestToken: row.guest_token,
+      customerId: row.customer_id,
       email: row.email,
       locale: row.locale,
       chargeCurrency: row.charge_currency,

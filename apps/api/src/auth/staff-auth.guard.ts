@@ -5,26 +5,27 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import type { JwtClaims } from './auth.types';
 
 export type StaffRequest = {
   headers: Record<string, string | string[] | undefined>;
-  staff?: { sub: string; role: string };
+  cookies?: Record<string, string>;
+  tenantId?: string;
+  staff?: JwtClaims;
 };
 
-/** Requires Authorization: Bearer <any non-empty stub token>. */
+/** Requires staff JWT via Authorization Bearer or ecom_staff_session cookie. */
 @Injectable()
 export class StaffAuthGuard implements CanActivate {
   constructor(private readonly auth: AuthService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<StaffRequest>();
-    const raw = req.headers.authorization;
-    const authorization = Array.isArray(raw) ? raw[0] : raw;
     try {
-      req.staff = this.auth.validateBearer(authorization);
+      req.staff = this.auth.requireStaffClaims(req);
       return true;
     } catch {
-      throw new UnauthorizedException('Staff bearer token required');
+      throw new UnauthorizedException('Staff session required');
     }
   }
 }

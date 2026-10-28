@@ -6,18 +6,24 @@ import { useParams } from 'next/navigation';
 import type { Product } from '@ecom/sdk-api';
 import { AdminShell } from '../../../components/AdminShell';
 import { ProductForm } from '../../../components/ProductForm';
-import { getAdminProduct } from '../../../lib/api';
-import { readStubSessionClient } from '../../../lib/auth-session';
+import { fetchStaffMe, getAdminProduct } from '../../../lib/api';
 
 export default function EditProductPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const [product, setProduct] = useState<Product | null>(null);
+  const [email, setEmail] = useState('owner@demo.localhost');
   const [error, setError] = useState<string | null>(null);
-  const email = readStubSessionClient()?.email ?? 'staff@merchant.com';
 
   useEffect(() => {
     let cancelled = false;
+    fetchStaffMe()
+      .then((me) => {
+        if (!cancelled) setEmail(me.email);
+      })
+      .catch(() => {
+        /* middleware should have gated; keep fallback */
+      });
     getAdminProduct(id)
       .then((data) => {
         if (!cancelled) setProduct(data);

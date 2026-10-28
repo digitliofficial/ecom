@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health'] });
   app.enableCors({
     origin: [
@@ -20,6 +22,7 @@ async function bootstrap() {
       'X-Cart-Token',
       'X-Forwarded-Host',
       'X-Tenant-Host',
+      'Cookie',
     ],
   });
   const port = Number(process.env.PORT ?? 3001);

@@ -2,20 +2,23 @@
 
 import {
   createApiClient,
+  type AuthResult,
+  type AuthUser,
   type Product,
   type ProductCreateInput,
   type ProductUpdateInput,
 } from '@ecom/sdk-api';
-import { readStubSessionClient } from './auth-session';
-
-/** Stub bearer for StaffAuthGuard — any non-empty token works in Phase 0. */
-export const ADMIN_STUB_BEARER = 'stub-admin';
+import {
+  clearStaffBearer,
+  readStaffBearer,
+  setStaffBearer,
+} from './auth-session';
 
 export function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 }
 
-/** Demo tenant for local stub session (hosts map in seed). */
+/** Demo tenant for local session (hosts map in seed). */
 export function getTenantHost(): string {
   return 'demo.localhost';
 }
@@ -24,11 +27,30 @@ function client() {
   return createApiClient({
     baseUrl: getApiBaseUrl(),
     getHost: getTenantHost,
-    getToken: () => {
-      const session = readStubSessionClient();
-      return session ? ADMIN_STUB_BEARER : undefined;
-    },
+    getToken: () => readStaffBearer(),
+    credentials: 'include',
   });
+}
+
+export async function staffLogin(
+  email: string,
+  password: string,
+): Promise<AuthResult> {
+  const result = await client().staffLogin({ email, password });
+  setStaffBearer(result.token);
+  return result;
+}
+
+export async function staffLogout(): Promise<void> {
+  try {
+    await client().staffLogout();
+  } finally {
+    clearStaffBearer();
+  }
+}
+
+export async function fetchStaffMe(): Promise<AuthUser> {
+  return client().me();
 }
 
 export async function listAdminProducts(): Promise<Product[]> {

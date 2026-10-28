@@ -6,7 +6,7 @@ export default function LoginPage() {
     <div style={{ padding: '3rem 2rem', maxWidth: 400 }}>
       <h1>{t('en', 'admin.login')}</h1>
       <p style={{ marginTop: '0.5rem', opacity: 0.75, fontSize: '0.95rem' }}>
-        Merchant admin local stub — no real credentials.
+        Merchant admin — email/password session (httpOnly JWT cookie).
       </p>
       <LoginForm />
     </div>

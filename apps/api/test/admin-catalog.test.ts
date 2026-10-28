@@ -13,11 +13,13 @@ const hasDb = Boolean(process.env.DATABASE_URL ?? true);
 describe('admin catalog CRUD', () => {
   let app: INestApplication;
   let server: Server;
+  let staffToken = '';
   const suffix = Date.now().toString(36);
 
   beforeAll(async () => {
     process.env.DATABASE_URL ??=
       'postgresql://ecom_app:ecom@localhost:5432/ecom';
+    process.env.JWT_SECRET ??= 'test-jwt-secret';
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -36,6 +38,14 @@ describe('admin catalog CRUD', () => {
     app.setGlobalPrefix('v1', { exclude: ['health'] });
     await app.init();
     server = app.getHttpServer() as Server;
+
+    if (hasDb) {
+      const login = await request(server)
+        .post('/v1/auth/staff/login')
+        .set('Host', DEMO_HOST)
+        .send({ email: 'owner@demo.localhost', password: 'DemoOwner123!' });
+      staffToken = login.body.token as string;
+    }
   });
 
   afterAll(async () => {
@@ -52,10 +62,12 @@ describe('admin catalog CRUD', () => {
   it.skipIf(!hasDb)(
     'create → storefront list → update inventory (demo tenant)',
     async () => {
+      expect(staffToken).toBeTruthy();
+
       const created = await request(server)
         .post('/v1/admin/catalog/products')
         .set('Host', DEMO_HOST)
-        .set('Authorization', 'Bearer stub-admin')
+        .set('Authorization', `Bearer ${staffToken}`)
         .send({
           title: `Admin Tee ${suffix}`,
           slug: `admin-tee-${suffix}`,
@@ -92,7 +104,7 @@ describe('admin catalog CRUD', () => {
       const patched = await request(server)
         .patch(`/v1/admin/catalog/products/${created.body.id}`)
         .set('Host', DEMO_HOST)
-        .set('Authorization', 'Bearer stub-admin')
+        .set('Authorization', `Bearer ${staffToken}`)
         .send({
           title: `Admin Tee ${suffix} Updated`,
           variants: [
@@ -112,15 +124,12 @@ describe('admin catalog CRUD', () => {
       expect(patched.body.variants[0].unitAmountMinor).toBe(2199);
       expect(patched.body.variants[0].inventoryQuantity).toBe(8);
 
-      const otherList = await request(server)
+      // Other tenant has no membership for demo owner — token tenant mismatch → 401
+      await request(server)
         .get('/v1/admin/catalog/products')
         .set('Host', OTHER_HOST)
-        .set('Authorization', 'Bearer stub-admin')
-        .expect(200);
-
-      expect(
-        otherList.body.find((p: { id: string }) => p.id === created.body.id),
-      ).toBeUndefined();
+        .set('Authorization', `Bearer ${staffToken}`)
+        .expect(401);
     },
   );
 });

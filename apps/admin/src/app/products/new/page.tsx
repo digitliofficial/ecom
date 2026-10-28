@@ -2,12 +2,16 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { AdminShell } from '../../../components/AdminShell';
 import { ProductForm } from '../../../components/ProductForm';
-import { ADMIN_STUB_COOKIE, parseStubSessionValue } from '../../../lib/auth-session';
+import {
+  STAFF_SESSION_COOKIE,
+  readStaffEmailFromCookie,
+} from '../../../lib/auth-session';
 
 export default async function NewProductPage() {
   const jar = await cookies();
-  const session = parseStubSessionValue(jar.get(ADMIN_STUB_COOKIE)?.value);
-  const email = session?.email ?? 'staff@merchant.com';
+  const email =
+    readStaffEmailFromCookie(jar.get(STAFF_SESSION_COOKIE)?.value) ??
+    'owner@demo.localhost';
 
   return (
     <AdminShell email={email}>

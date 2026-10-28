@@ -5,6 +5,8 @@ export type SdkApiOptions = {
   getToken?: () => string | undefined;
   getHost?: () => string | undefined;
   getCartToken?: () => string | undefined;
+  /** Send cookies (httpOnly session). Default false. */
+  credentials?: RequestCredentials;
 };
 
 export type ShippingAddress = {
@@ -30,6 +32,7 @@ export type Cart = {
   tenantId: string;
   status: string;
   guestToken: string;
+  customerId?: string | null;
   email: string | null;
   lines: CartLine[];
 };
@@ -77,6 +80,20 @@ export type ProductUpdateInput = {
   variants?: VariantInput[];
 };
 
+export type AuthUser = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  tenantId: string;
+  kind: 'staff' | 'customer';
+  role: string;
+};
+
+export type AuthResult = {
+  user: AuthUser;
+  token: string;
+};
+
 export type CheckoutSessionResult = {
   id: string;
   cartId: string;
@@ -117,6 +134,10 @@ export class ApiClient {
     return headers;
   }
 
+  private credentials(): RequestCredentials | undefined {
+    return this.opts.credentials;
+  }
+
   private async parse<T>(res: Response, method: string, path: string): Promise<T> {
     if (!res.ok) {
       const text = await res.text();
@@ -135,6 +156,7 @@ export class ApiClient {
   async get<T>(path: string): Promise<T> {
     const res = await fetch(`${this.opts.baseUrl}${path}`, {
       headers: this.headers(),
+      credentials: this.credentials(),
     });
     return this.parse<T>(res, 'GET', path);
   }
@@ -144,6 +166,7 @@ export class ApiClient {
       method: 'POST',
       headers: this.headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
+      credentials: this.credentials(),
     });
     return this.parse<T>(res, 'POST', path);
   }
@@ -153,6 +176,7 @@ export class ApiClient {
       method: 'PATCH',
       headers: this.headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
+      credentials: this.credentials(),
     });
     return this.parse<T>(res, 'PATCH', path);
   }
@@ -161,8 +185,40 @@ export class ApiClient {
     const res = await fetch(`${this.opts.baseUrl}${path}`, {
       method: 'DELETE',
       headers: this.headers(),
+      credentials: this.credentials(),
     });
     return this.parse<T>(res, 'DELETE', path);
+  }
+
+  me(): Promise<AuthUser> {
+    return this.get<AuthUser>('/v1/auth/me');
+  }
+
+  staffLogin(body: { email: string; password: string }): Promise<AuthResult> {
+    return this.post<AuthResult>('/v1/auth/staff/login', body);
+  }
+
+  staffLogout(): Promise<{ ok: boolean }> {
+    return this.post<{ ok: boolean }>('/v1/auth/staff/logout', {});
+  }
+
+  customerRegister(body: {
+    email: string;
+    password: string;
+    displayName?: string;
+  }): Promise<AuthResult> {
+    return this.post<AuthResult>('/v1/auth/customer/register', body);
+  }
+
+  customerLogin(body: {
+    email: string;
+    password: string;
+  }): Promise<AuthResult> {
+    return this.post<AuthResult>('/v1/auth/customer/login', body);
+  }
+
+  customerLogout(): Promise<{ ok: boolean }> {
+    return this.post<{ ok: boolean }>('/v1/auth/customer/logout', {});
   }
 
   listProducts(): Promise<Product[]> {
