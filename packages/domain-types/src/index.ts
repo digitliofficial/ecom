@@ -1,4 +1,4 @@
-/** Shared domain types — Phase 0 stubs */
+/** Shared domain types */
 
 export type Money = {
   amountMinor: bigint | number;
@@ -28,6 +28,7 @@ export type Cart = {
   id: string;
   tenantId: string;
   status: CartStatus;
+  guestToken?: string | null;
   locale?: string | null;
   displayCurrency?: string | null;
   chargeCurrency?: string | null;
@@ -53,4 +54,36 @@ export type CheckoutSession = {
   addressValidated?: boolean | null;
   addressProvider?: string | null;
   normalizedAddress?: Record<string, unknown> | null;
+};
+
+export type OrderStatus = 'pending' | 'placed' | 'cancelled' | 'fulfilled' | 'partially_fulfilled';
+
+export type Order = {
+  id: string;
+  tenantId: string;
+  cartId?: string | null;
+  checkoutSessionId?: string | null;
+  status: OrderStatus;
+  paymentStatus: string;
+  guestEmail?: string | null;
+  totalAmountMinor: number;
+  chargeCurrency: string;
+};
+
+export type Product = {
+  id: string;
+  tenantId: string;
+  slug: string;
+  title: string;
+  description?: string | null;
+};
+
+export type ProductVariant = {
+  id: string;
+  tenantId: string;
+  productId: string;
+  sku: string;
+  title: string;
+  unitAmountMinor: number;
+  currency: string;
 };

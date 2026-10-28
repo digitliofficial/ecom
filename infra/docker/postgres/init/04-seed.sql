@@ -27,3 +27,12 @@ VALUES (
   true
 )
 ON CONFLICT (host) DO NOTHING;
+
+-- Local storefront default host maps to demo tenant
+INSERT INTO tenant_domains (tenant_id, host, is_primary)
+VALUES (
+  '00000000-0000-4000-8000-000000000001',
+  'localhost',
+  false
+)
+ON CONFLICT (host) DO NOTHING;

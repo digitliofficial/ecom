@@ -18,8 +18,18 @@ export default function LocaleLayout({
         color: t.foreground,
       }}
     >
-      <header style={{ padding: '1.25rem 1.5rem', letterSpacing: '0.08em', fontSize: '0.85rem' }}>
-        ecom · demo
+      <header
+        style={{
+          padding: '1.25rem 1.5rem',
+          letterSpacing: '0.08em',
+          fontSize: '0.85rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+        }}
+      >
+        <span>ecom · demo</span>
+        <span style={{ opacity: 0.65, letterSpacing: '0.04em' }}>guest checkout</span>
       </header>
       <main style={{ padding: '0 1.5rem 3rem' }}>{children}</main>
     </div>

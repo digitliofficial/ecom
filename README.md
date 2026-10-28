@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0** — foundations: workspace, stubs, Postgres + Redis via Compose, CI skeleton.
+**Phase 0 + guest checkout slice** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order without charging, FastAPI address stub, storefront flow.
 
 ## Stack
 
@@ -42,7 +42,19 @@ pnpm dev
 | Postgres | `localhost:5432` (`ecom` / `ecom`) |
 | Redis | `localhost:6379` |
 
-Demo tenant: slug `demo`, host `demo.localhost`.
+Demo tenant: slug `demo`, hosts `demo.localhost` / `localhost`. Isolation fixture: `other` / `other.localhost`.
+
+App DB user for RLS: `ecom_app` / `ecom` (see `.env.example`). Owner `ecom` bypasses RLS as superuser in Compose.
+
+### Guest checkout smoke
+
+```bash
+pnpm --filter @ecom/api dev          # :3001
+# optional: cd apps/compute && uv run uvicorn app.main:app --port 8000
+pnpm --filter @ecom/storefront dev   # :3000 → /en
+```
+
+Flow: home → Add to cart → cart → checkout (email + address) → order `placed` / `not_charged` (NoopAdapter).
 
 ## Workspace layout
 
