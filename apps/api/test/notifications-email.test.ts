@@ -132,6 +132,7 @@ describe('Order lifecycle + abandoned cart email', () => {
         cartId,
         email: `placed-${suffix}@example.com`,
         paymentMethod: 'cod',
+        shippingMethodId: DEMO_STANDARD_SHIP,
         shippingAddress: {
           line1: '1 Test St',
           city: 'Karachi',
@@ -173,6 +174,7 @@ describe('Order lifecycle + abandoned cart email', () => {
         cartId,
         email: `ship-${suffix}@example.com`,
         paymentMethod: 'cod',
+        shippingMethodId: DEMO_STANDARD_SHIP,
         shippingAddress: {
           line1: '2 Test St',
           city: 'Lahore',

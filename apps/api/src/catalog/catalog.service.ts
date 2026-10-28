@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { PoolClient } from 'pg';
+import { MeteringService } from '../billing/metering.service';
 import { DatabaseService } from '../db/database.service';
 
 export type VariantDto = {
@@ -61,7 +62,10 @@ function slugify(raw: string): string {
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly metering: MeteringService,
+  ) {}
 
   async listProducts(tenantId: string): Promise<ProductDto[]> {
     return this.db.withTenant(tenantId, async (client) => {
@@ -101,6 +105,8 @@ export class CatalogService {
 
     const status = this.normalizeStatus(input.status ?? 'active');
     const variants = input.variants.map((v) => this.normalizeVariantInput(v));
+
+    await this.metering.assertHardLimit(tenantId, 'products');
 
     return this.db.withTenant(tenantId, async (client) => {
       let productId: string;

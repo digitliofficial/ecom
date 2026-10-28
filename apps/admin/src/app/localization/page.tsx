@@ -23,7 +23,8 @@ export default async function LocalizationPage() {
         <p style={{ opacity: 0.8, maxWidth: 520 }}>
           Set the store default locale and charge currency. Turn on multi-language
           or multi-currency to enable additional options; the storefront shows
-          switchers when more than one is enabled.
+          switchers when more than one is enabled. Language and currency counts
+          are plan-capped — see <Link href="/plans">Plans</Link> to upgrade.
         </p>
         <LocalizationSettingsForm />
       </div>

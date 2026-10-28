@@ -598,6 +598,115 @@ export type AdminOrderDetail = AdminOrderSummary & {
   fulfillments: AdminFulfillment[];
 };
 
+export type PlanView = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  entitlements: Record<string, string>;
+};
+
+export type UsageMeter = {
+  metric: 'products' | 'staff' | 'locales' | 'orders_month';
+  label: string;
+  usage: number;
+  limit: number | null;
+  unlimited: boolean;
+  enforcement: 'hard' | 'soft';
+  atLimit: boolean;
+  overSoftLimit: boolean;
+};
+
+export type SoftLimitWarning = {
+  metric: 'orders_month';
+  message: string;
+  usage: number;
+  limit: number;
+};
+
+export type TenantBillingSnapshot = {
+  plan: PlanView;
+  subscription: {
+    status: string;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+  } | null;
+  meters: UsageMeter[];
+  softWarnings: SoftLimitWarning[];
+  features: { b2b: boolean };
+  stripeBillingConfigured: boolean;
+};
+
+export type StaffMember = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: string;
+  createdAt: string;
+};
+
+export type TenantLocale = {
+  id: string;
+  locale: string;
+  enabled: boolean;
+  isDefault: boolean;
+};
+
+export type UpgradeRequiredError = {
+  statusCode: 402;
+  code: 'upgrade_required';
+  message: string;
+  metric: string;
+  limit: number;
+  usage: number;
+  planCode: string;
+  suggestedPlanCode: string | null;
+};
+
+export type StripeBillingStubResult = {
+  id?: string;
+  url: string;
+  status: 'stub' | 'created';
+  provider: 'stripe_billing';
+  planCode?: string;
+  message: string;
+};
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly body: unknown;
+
+  constructor(method: string, path: string, status: number, body: unknown) {
+    const detail =
+      typeof body === 'object' &&
+      body !== null &&
+      'message' in body &&
+      typeof (body as { message: unknown }).message === 'string'
+        ? (body as { message: string }).message
+        : typeof body === 'string'
+          ? body
+          : JSON.stringify(body);
+    super(`${method} ${path} failed: ${status} ${detail}`);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+
+  get upgradeRequired(): UpgradeRequiredError | null {
+    if (
+      typeof this.body === 'object' &&
+      this.body !== null &&
+      (this.body as { code?: string }).code === 'upgrade_required'
+    ) {
+      return this.body as UpgradeRequiredError;
+    }
+    return null;
+  }
+}
+
 export class ApiClient {
   constructor(private readonly opts: SdkApiOptions) {}
 
@@ -622,7 +731,13 @@ export class ApiClient {
   private async parse<T>(res: Response, method: string, path: string): Promise<T> {
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`${method} ${path} failed: ${res.status} ${text}`);
+      let body: unknown = text;
+      try {
+        body = text ? JSON.parse(text) : text;
+      } catch {
+        /* keep raw text */
+      }
+      throw new ApiError(method, path, res.status, body);
     }
     if (res.status === 204) return undefined as T;
     return res.json() as Promise<T>;
@@ -1099,6 +1214,65 @@ export class ApiClient {
     });
     return this.parse<T>(res, 'POST', path);
   }
+  getBillingUsage(): Promise<TenantBillingSnapshot> {
+    return this.get<TenantBillingSnapshot>('/v1/admin/billing/usage');
+  }
+
+  listBillingPlans(): Promise<PlanView[]> {
+    return this.get<PlanView[]>('/v1/admin/billing/plans');
+  }
+
+  changeBillingPlan(body: { planCode: string }): Promise<TenantBillingSnapshot> {
+    return this.post<TenantBillingSnapshot>('/v1/admin/billing/change-plan', body);
+  }
+
+  createStripeBillingCheckout(body: {
+    planCode: string;
+    successUrl: string;
+    cancelUrl: string;
+  }): Promise<StripeBillingStubResult> {
+    return this.post<StripeBillingStubResult>(
+      '/v1/admin/billing/stripe/checkout',
+      body,
+    );
+  }
+
+  createStripeBillingPortal(body: {
+    returnUrl: string;
+  }): Promise<StripeBillingStubResult> {
+    return this.post<StripeBillingStubResult>(
+      '/v1/admin/billing/stripe/portal',
+      body,
+    );
+  }
+
+  listStaffMembers(): Promise<StaffMember[]> {
+    return this.get<StaffMember[]>('/v1/admin/billing/staff');
+  }
+
+  inviteStaffMember(body: {
+    email: string;
+    password: string;
+    displayName?: string;
+    role?: string;
+  }): Promise<Omit<StaffMember, 'createdAt'>> {
+    return this.post('/v1/admin/billing/staff', body);
+  }
+
+  listTenantLocales(): Promise<TenantLocale[]> {
+    return this.get<TenantLocale[]>('/v1/admin/billing/locales');
+  }
+
+  enableTenantLocale(body: { locale: string }): Promise<TenantLocale> {
+    return this.post<TenantLocale>('/v1/admin/billing/locales', body);
+  }
+
+  disableTenantLocale(locale: string): Promise<{ ok: boolean }> {
+    return this.delete<{ ok: boolean }>(
+      `/v1/admin/billing/locales/${encodeURIComponent(locale)}`,
+    );
+  }
+
 }
 
 export function createApiClient(opts: SdkApiOptions): ApiClient {

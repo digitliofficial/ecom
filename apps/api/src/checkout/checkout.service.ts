@@ -18,6 +18,10 @@ import {
 import { AbandonedCartService } from '../notifications/abandoned-cart.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
+  MeteringService,
+  type SoftLimitWarning,
+} from '../billing/metering.service';
+import {
   PaymentsService,
   type BankDetails,
 } from '../payments/payments.service';
@@ -69,6 +73,8 @@ export type CheckoutResult = {
   };
   /** Present when paymentMethod is bank_transfer */
   bankTransferInstructions: BankDetails | null;
+  /** Soft plan metering — never blocks checkout */
+  planSoftWarning: SoftLimitWarning | null;
 };
 
 @Injectable()
@@ -81,6 +87,7 @@ export class CheckoutService {
     private readonly shipping: ShippingService,
     private readonly notifications: NotificationsService,
     private readonly abandonedCart: AbandonedCartService,
+    private readonly metering: MeteringService,
   ) {}
 
   async createSession(
@@ -147,6 +154,9 @@ export class CheckoutService {
     const shippingAmount = shippingMethod.priceAmountMinor;
     const total = subtotal + shippingAmount;
     const currency = cart.chargeCurrency ?? cart.lines[0]?.currency ?? 'USD';
+
+    // Soft order/month cap — warn only; never block checkout.
+    const planSoftWarning = await this.metering.softCheckOrdersMonth(tenantId);
 
     // Offline PaymentProvider adapters (COD / bank transfer). Stripe/Noop stay optional.
     const provider = offlineProviderFor(paymentMethod);
@@ -291,6 +301,7 @@ export class CheckoutService {
         },
         bankTransferInstructions:
           paymentMethod === 'bank_transfer' ? bankDetails : null,
+        planSoftWarning,
       };
     }).then(async (result) => {
       // Drain outbox so console/Resend shows mail promptly after checkout

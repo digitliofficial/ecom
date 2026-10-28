@@ -116,3 +116,69 @@ export function offlineProviderFor(
       return new BankTransferAdapter();
   }
 }
+
+/* --- Stripe Billing (SaaS merchant←platform) — separate from Connect commerce --- */
+
+export type StripeBillingCheckoutInput = {
+  tenantId: string;
+  planCode: string;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+};
+
+export type StripeBillingCheckoutResult = {
+  id: string;
+  url: string;
+  status: 'stub' | 'created';
+  provider: 'stripe_billing';
+};
+
+export type StripeBillingPortalInput = {
+  tenantId: string;
+  returnUrl: string;
+  stripeCustomerId?: string | null;
+};
+
+export type StripeBillingPortalResult = {
+  url: string;
+  status: 'stub' | 'created';
+  provider: 'stripe_billing';
+};
+
+/**
+ * Optional Stripe Billing stub for merchant SaaS subscriptions.
+ * Does not charge; returns placeholder Checkout / Customer Portal URLs.
+ * Pass `secretKey` from the host (e.g. Nest `STRIPE_BILLING_SECRET_KEY`) when wiring live SDK later.
+ */
+export class StripeBillingStub {
+  readonly name = 'stripe_billing' as const;
+
+  constructor(private readonly secretKey?: string | null) {}
+
+  isConfigured(): boolean {
+    return Boolean(this.secretKey?.trim());
+  }
+
+  async createCheckoutSession(
+    input: StripeBillingCheckoutInput,
+  ): Promise<StripeBillingCheckoutResult> {
+    const id = `cs_stub_${input.planCode}_${Date.now().toString(36)}`;
+    return {
+      id,
+      url: `${input.successUrl}${input.successUrl.includes('?') ? '&' : '?'}billing=stub&session=${id}&plan=${encodeURIComponent(input.planCode)}`,
+      status: 'stub',
+      provider: this.name,
+    };
+  }
+
+  async createCustomerPortalSession(
+    input: StripeBillingPortalInput,
+  ): Promise<StripeBillingPortalResult> {
+    return {
+      url: `${input.returnUrl}${input.returnUrl.includes('?') ? '&' : '?'}billing=portal_stub&tenant=${encodeURIComponent(input.tenantId)}`,
+      status: 'stub',
+      provider: this.name,
+    };
+  }
+}

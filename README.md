@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy + CMS + lifecycle email + Shopify import MVP** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping + **notification** settings (console EmailProvider MVP; optional Resend; abandoned-cart reminders) + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR** + **CMS** (menus, SEO, theme packs, policy pages), **platform migration jobs** (Shopify Admin API / CSV / fixtures → products, customers, archive orders, redirects), platform-admin ops, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy + CMS + lifecycle email + Shopify import MVP + SaaS plan metering** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping + **notification** settings (console EmailProvider MVP; optional Resend; abandoned-cart reminders) + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR** + **CMS** (menus, SEO, theme packs, policy pages), **platform migration jobs** (Shopify Admin API / CSV / fixtures → products, customers, archive orders, redirects), platform-admin ops, email/password sessions (JWT httpOnly cookies) for merchant staff and customers, and **Shopify-like plan tiers** (hard caps on products/staff/languages, soft orders/month warnings, admin upgrade prompts). Commerce Stripe/Noop stay optional and **disabled by default**; merchant **Stripe Billing** is an optional stub (`STRIPE_BILLING_SECRET_KEY`). Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -178,6 +178,42 @@ Flow: home → Add to cart → cart → checkout (email + address + **payment me
 # Enabled payment + shipping methods for demo tenant
 curl -sS -H 'Host: demo.localhost' http://localhost:3001/v1/payments/methods
 curl -sS -H 'Host: demo.localhost' 'http://localhost:3001/v1/shipping/methods?paymentMethod=cod'
+```
+
+### SaaS plans & metering (local)
+
+Shopify-like tiers (`starter` / `growth` / `advanced`) with hard caps on **products**, **staff seats**, and **languages**, plus a soft **orders/month** warning. Demo tenant starts on **Starter**.
+
+```bash
+pnpm db:apply                       # 17-plans-metering.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002 → /plans, /staff, /localization
+```
+
+| Cap | Starter | Growth | Advanced | Enforcement |
+|---|---|---|---|---|
+| Products | 100 | 2,000 | Unlimited* | Hard `402` + `upgrade_required` |
+| Staff seats | 2 | 10 | 25 | Hard |
+| Languages | 1 | 3 | 10 | Hard |
+| Orders / month | 50 | 500 | 5,000 | Soft warn (checkout still succeeds) |
+
+\* `-1` in entitlements = unlimited.
+
+Admin: **Plans** (usage meters, compare tiers, local plan switch, Stripe Billing stub), **Staff** (invite under seat cap), **Localization** (enable languages under locale cap). Product create surfaces the same upgrade prompt at the product hard limit.
+
+```bash
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/billing/usage
+
+# Stripe Billing stub (no charge) — optional; live Checkout later via STRIPE_BILLING_SECRET_KEY
+curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"planCode":"growth","successUrl":"http://localhost:3002/plans","cancelUrl":"http://localhost:3002/plans"}' \
+  http://localhost:3001/v1/admin/billing/stripe/checkout
 ```
 
 ### Offline payments — COD + bank transfer (local)

@@ -2,12 +2,14 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Product, VariantInput } from '@ecom/sdk-api';
+import type { Product, UpgradeRequiredError, VariantInput } from '@ecom/sdk-api';
 import {
+  ApiError,
   createAdminProduct,
   slugify,
   updateAdminProduct,
 } from '../lib/api';
+import { UpgradePrompt } from './UpgradePrompt';
 
 type VariantDraft = {
   key: string;
@@ -59,6 +61,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
     toDrafts(initial),
   );
   const [error, setError] = useState<string | null>(null);
+  const [upgrade, setUpgrade] = useState<UpgradeRequiredError | null>(null);
   const [saving, setSaving] = useState(false);
 
   function updateVariant(key: string, patch: Partial<VariantDraft>) {
@@ -88,6 +91,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    setUpgrade(null);
     setSaving(true);
     try {
       const parsedVariants: VariantInput[] = variants.map((v) => ({
@@ -120,7 +124,11 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
         router.refresh();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      if (err instanceof ApiError && err.upgradeRequired) {
+        setUpgrade(err.upgradeRequired);
+      } else {
+        setError(err instanceof Error ? err.message : 'Save failed');
+      }
     } finally {
       setSaving(false);
     }
@@ -134,6 +142,9 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
 
   return (
     <form onSubmit={onSubmit} style={{ display: 'grid', gap: '1.25rem', marginTop: '1rem' }}>
+      {upgrade ? (
+        <UpgradePrompt error={upgrade} onDismiss={() => setUpgrade(null)} />
+      ) : null}
       <label style={fieldStyle}>
         <span>Title</span>
         <input
