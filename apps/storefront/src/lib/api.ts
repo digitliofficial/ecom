@@ -4,6 +4,7 @@ import {
   createApiClient,
   type Cart,
   type CheckoutSessionResult,
+  type Collection,
   type OfflinePaymentMethod,
   type Product,
   type ShippingAddress,
@@ -50,8 +51,18 @@ function client() {
   });
 }
 
-export async function listProducts(): Promise<Product[]> {
-  return client().listProducts();
+export async function listProducts(opts?: {
+  collection?: string;
+}): Promise<Product[]> {
+  return client().listProducts(opts);
+}
+
+export async function listCollections(): Promise<Collection[]> {
+  return client().listCollections();
+}
+
+export async function getCollection(slug: string): Promise<Collection> {
+  return client().getCollection(slug);
 }
 
 export async function fetchCurrentCart(): Promise<Cart | null> {
@@ -123,6 +134,7 @@ export async function checkout(input: {
   email: string;
   shippingAddress: ShippingAddress;
   paymentMethod: OfflinePaymentMethod;
+  discountCode?: string;
 }): Promise<CheckoutSessionResult> {
   const cart = await ensureCart();
   const result = await client().createCheckoutSession({
@@ -130,6 +142,7 @@ export async function checkout(input: {
     email: input.email,
     shippingAddress: input.shippingAddress,
     paymentMethod: input.paymentMethod,
+    discountCode: input.discountCode,
   });
   clearCartToken();
   return result;

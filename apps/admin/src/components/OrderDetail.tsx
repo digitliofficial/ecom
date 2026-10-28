@@ -95,6 +95,19 @@ export function OrderDetail({ initial }: OrderDetailProps) {
             {order.paymentStatus}
           </dd>
         </div>
+        {order.discountCode ? (
+          <div>
+            <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Discount</dt>
+            <dd style={{ margin: 0 }}>
+              {order.discountCode} (−
+              {formatMoney(
+                order.discountAmountMinor ?? 0,
+                order.chargeCurrency,
+              )}
+              )
+            </dd>
+          </div>
+        ) : null}
         <div>
           <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Created</dt>
           <dd style={{ margin: 0 }}>{new Date(order.createdAt).toLocaleString()}</dd>

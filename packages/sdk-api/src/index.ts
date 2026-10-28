@@ -142,12 +142,131 @@ export type CheckoutSessionResult = {
     status: string;
     paymentStatus: string;
     paymentMethod: OfflinePaymentMethod | string;
+    subtotalAmountMinor?: number;
+    discountCode?: string | null;
+    discountAmountMinor?: number;
     totalAmountMinor: number;
     currency: string;
     accessToken: string;
   };
   payment: { id: string; status: string; provider: string };
   bankTransferInstructions: BankDetails | null;
+};
+
+export type Collection = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  status: string;
+  productIds: string[];
+  productCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+  products?: Product[];
+};
+
+export type CollectionCreateInput = {
+  title: string;
+  slug?: string;
+  description?: string | null;
+  status?: string;
+  productIds?: string[];
+};
+
+export type CollectionUpdateInput = {
+  title?: string;
+  slug?: string;
+  description?: string | null;
+  status?: string;
+  productIds?: string[];
+};
+
+export type DiscountType = 'percentage' | 'fixed';
+
+export type Discount = {
+  id: string;
+  code: string;
+  title: string;
+  type: DiscountType;
+  value: number;
+  currency: string;
+  minSubtotalMinor: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  usageLimit: number | null;
+  usageCount: number;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type DiscountCreateInput = {
+  code: string;
+  title: string;
+  type: DiscountType;
+  value: number;
+  currency?: string;
+  minSubtotalMinor?: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  usageLimit?: number | null;
+  active?: boolean;
+};
+
+export type DiscountUpdateInput = {
+  code?: string;
+  title?: string;
+  type?: DiscountType;
+  value?: number;
+  currency?: string;
+  minSubtotalMinor?: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  usageLimit?: number | null;
+  active?: boolean;
+};
+
+export type InventoryLocation = {
+  id: string;
+  name: string;
+  code: string;
+  isDefault: boolean;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type LocationCreateInput = {
+  name: string;
+  code: string;
+  isDefault?: boolean;
+  active?: boolean;
+};
+
+export type LocationUpdateInput = {
+  name?: string;
+  code?: string;
+  isDefault?: boolean;
+  active?: boolean;
+};
+
+export type InventoryLevel = {
+  id: string;
+  locationId: string;
+  locationCode: string;
+  locationName: string;
+  variantId: string;
+  sku: string;
+  productTitle: string;
+  quantity: number;
+  updatedAt?: string;
+};
+
+export type SetStockInput = {
+  locationId: string;
+  variantId: string;
+  quantity: number;
 };
 
 export type AdminOrderStatus =
@@ -178,6 +297,8 @@ export type AdminOrderSummary = {
   paymentMethod: string | null;
   guestEmail: string | null;
   customerId: string | null;
+  discountCode?: string | null;
+  discountAmountMinor?: number;
   totalAmountMinor: number;
   chargeCurrency: string;
   createdAt: string;
@@ -256,6 +377,16 @@ export class ApiClient {
     return this.parse<T>(res, 'PATCH', path);
   }
 
+  async put<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${this.opts.baseUrl}${path}`, {
+      method: 'PUT',
+      headers: this.headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body),
+      credentials: this.credentials(),
+    });
+    return this.parse<T>(res, 'PUT', path);
+  }
+
   async delete<T>(path: string): Promise<T> {
     const res = await fetch(`${this.opts.baseUrl}${path}`, {
       method: 'DELETE',
@@ -296,8 +427,97 @@ export class ApiClient {
     return this.post<{ ok: boolean }>('/v1/auth/customer/logout', {});
   }
 
-  listProducts(): Promise<Product[]> {
-    return this.get<Product[]>('/v1/catalog/products');
+  listProducts(opts?: { collection?: string }): Promise<Product[]> {
+    const qs = opts?.collection
+      ? `?collection=${encodeURIComponent(opts.collection)}`
+      : '';
+    return this.get<Product[]>(`/v1/catalog/products${qs}`);
+  }
+
+  listCollections(): Promise<Collection[]> {
+    return this.get<Collection[]>('/v1/catalog/collections');
+  }
+
+  getCollection(slug: string): Promise<Collection> {
+    return this.get<Collection>(
+      `/v1/catalog/collections/${encodeURIComponent(slug)}`,
+    );
+  }
+
+  listAdminCollections(): Promise<Collection[]> {
+    return this.get<Collection[]>('/v1/admin/collections');
+  }
+
+  getAdminCollection(id: string): Promise<Collection> {
+    return this.get<Collection>(`/v1/admin/collections/${id}`);
+  }
+
+  createAdminCollection(body: CollectionCreateInput): Promise<Collection> {
+    return this.post<Collection>('/v1/admin/collections', body);
+  }
+
+  updateAdminCollection(
+    id: string,
+    body: CollectionUpdateInput,
+  ): Promise<Collection> {
+    return this.patch<Collection>(`/v1/admin/collections/${id}`, body);
+  }
+
+  deleteAdminCollection(id: string): Promise<void> {
+    return this.delete<void>(`/v1/admin/collections/${id}`);
+  }
+
+  listAdminDiscounts(): Promise<Discount[]> {
+    return this.get<Discount[]>('/v1/admin/discounts');
+  }
+
+  getAdminDiscount(id: string): Promise<Discount> {
+    return this.get<Discount>(`/v1/admin/discounts/${id}`);
+  }
+
+  createAdminDiscount(body: DiscountCreateInput): Promise<Discount> {
+    return this.post<Discount>('/v1/admin/discounts', body);
+  }
+
+  updateAdminDiscount(
+    id: string,
+    body: DiscountUpdateInput,
+  ): Promise<Discount> {
+    return this.patch<Discount>(`/v1/admin/discounts/${id}`, body);
+  }
+
+  deleteAdminDiscount(id: string): Promise<void> {
+    return this.delete<void>(`/v1/admin/discounts/${id}`);
+  }
+
+  listAdminLocations(): Promise<InventoryLocation[]> {
+    return this.get<InventoryLocation[]>('/v1/admin/inventory/locations');
+  }
+
+  getAdminLocation(id: string): Promise<InventoryLocation> {
+    return this.get<InventoryLocation>(`/v1/admin/inventory/locations/${id}`);
+  }
+
+  createAdminLocation(body: LocationCreateInput): Promise<InventoryLocation> {
+    return this.post<InventoryLocation>('/v1/admin/inventory/locations', body);
+  }
+
+  updateAdminLocation(
+    id: string,
+    body: LocationUpdateInput,
+  ): Promise<InventoryLocation> {
+    return this.patch<InventoryLocation>(
+      `/v1/admin/inventory/locations/${id}`,
+      body,
+    );
+  }
+
+  listAdminInventoryLevels(): Promise<InventoryLevel[]> {
+    return this.get<InventoryLevel[]>('/v1/admin/inventory/levels');
+  }
+
+  setAdminInventoryLevel(body: SetStockInput): Promise<InventoryLevel> {
+    return this.put<InventoryLevel>('/v1/admin/inventory/levels', body);
   }
 
   listAdminProducts(): Promise<Product[]> {
@@ -352,6 +572,7 @@ export class ApiClient {
     email: string;
     shippingAddress: ShippingAddress;
     paymentMethod: OfflinePaymentMethod;
+    discountCode?: string;
   }): Promise<CheckoutSessionResult> {
     return this.post<CheckoutSessionResult>('/v1/checkout/sessions', body);
   }

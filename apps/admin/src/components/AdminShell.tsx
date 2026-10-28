@@ -34,6 +34,9 @@ export function AdminShell({ email, children }: AdminShellProps) {
         <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.95rem', alignItems: 'center' }}>
           <Link href="/">Dashboard</Link>
           <Link href="/products">Products</Link>
+          <Link href="/collections">Collections</Link>
+          <Link href="/discounts">Discounts</Link>
+          <Link href="/inventory">Inventory</Link>
           <Link href="/orders">Orders</Link>
           <Link href="/payments">Payments</Link>
           <Link href="/localization">Localization</Link>

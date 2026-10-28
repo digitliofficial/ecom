@@ -14,14 +14,22 @@ export default async function AdminHome() {
 
   return (
     <AdminShell email={email}>
-      <p style={{ marginTop: '1.5rem', maxWidth: 480 }}>
-        Signed in as demo tenant staff. Manage catalog under Products, fulfill
-        guest checkout orders under Orders, and toggle COD / bank transfer under
-        Payments; Localization remains a settings shell.
+      <p style={{ marginTop: '1.5rem', maxWidth: 520 }}>
+        Signed in as demo tenant staff. Manage catalog, collections, coupons,
+        multi-location inventory, orders, and offline payments.
       </p>
       <ul style={{ marginTop: '1.25rem', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
         <li>
           <Link href="/products">Products</Link> — list / create / edit catalog
+        </li>
+        <li>
+          <Link href="/collections">Collections</Link> — group products for the storefront
+        </li>
+        <li>
+          <Link href="/discounts">Discounts</Link> — percentage / fixed coupons
+        </li>
+        <li>
+          <Link href="/inventory">Inventory</Link> — locations + stock per variant
         </li>
         <li>
           <Link href="/orders">Orders</Link> — list / detail / fulfill · ship · cancel

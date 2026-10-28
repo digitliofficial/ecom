@@ -119,10 +119,11 @@ export class CatalogService {
 
       for (const variant of variants) {
         try {
-          await client.query(
+          const inserted = await client.query<{ id: string }>(
             `INSERT INTO product_variants
                (tenant_id, product_id, sku, title, unit_amount_minor, currency, inventory_quantity)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING id`,
             [
               tenantId,
               productId,
@@ -132,6 +133,12 @@ export class CatalogService {
               variant.currency,
               variant.inventoryQuantity,
             ],
+          );
+          await this.syncDefaultLocationStock(
+            client,
+            tenantId,
+            inserted.rows[0]!.id,
+            variant.inventoryQuantity,
           );
         } catch (err) {
           this.rethrowUnique(err, 'slug or sku already exists');
@@ -235,6 +242,12 @@ export class CatalogService {
               );
             }
             keptIds.push(updated.rows[0].id);
+            await this.syncDefaultLocationStock(
+              client,
+              tenantId,
+              updated.rows[0].id,
+              variant.inventoryQuantity,
+            );
           } else {
             try {
               const inserted = await client.query<{ id: string }>(
@@ -253,6 +266,12 @@ export class CatalogService {
                 ],
               );
               keptIds.push(inserted.rows[0]!.id);
+              await this.syncDefaultLocationStock(
+                client,
+                tenantId,
+                inserted.rows[0]!.id,
+                variant.inventoryQuantity,
+              );
             } catch (err) {
               this.rethrowUnique(err, 'sku already exists');
               throw err;
@@ -393,6 +412,52 @@ export class CatalogService {
       currency,
       inventoryQuantity,
     };
+  }
+
+  /**
+   * Keep default-location inventory_levels aligned with the aggregate qty
+   * set on the product form. Non-default location stock is preserved; the
+   * default absorbs the remainder so total ≈ form quantity.
+   */
+  private async syncDefaultLocationStock(
+    client: PoolClient,
+    tenantId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    const location = await client.query<{ id: string }>(
+      `SELECT id FROM locations WHERE is_default = true LIMIT 1`,
+    );
+    const locationId = location.rows[0]?.id;
+    if (!locationId) return;
+
+    const others = await client.query<{ qty: number }>(
+      `SELECT COALESCE(SUM(il.quantity), 0)::int AS qty
+       FROM inventory_levels il
+       WHERE il.variant_id = $1 AND il.location_id <> $2`,
+      [variantId, locationId],
+    );
+    const defaultQty = Math.max(0, quantity - Number(others.rows[0]?.qty ?? 0));
+
+    await client.query(
+      `INSERT INTO inventory_levels
+         (tenant_id, location_id, variant_id, quantity, updated_at)
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (location_id, variant_id)
+       DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = now()`,
+      [tenantId, locationId, variantId, defaultQty],
+    );
+
+    await client.query(
+      `UPDATE product_variants v
+       SET inventory_quantity = COALESCE((
+         SELECT SUM(il.quantity)::int
+         FROM inventory_levels il
+         WHERE il.variant_id = v.id
+       ), $2)
+       WHERE v.id = $1`,
+      [variantId, quantity],
+    );
   }
 
   private rethrowUnique(err: unknown, message: string): void {

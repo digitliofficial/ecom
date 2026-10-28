@@ -34,6 +34,8 @@ export type OrderSummaryDto = {
   paymentMethod: string | null;
   guestEmail: string | null;
   customerId: string | null;
+  discountCode: string | null;
+  discountAmountMinor: number;
   totalAmountMinor: number;
   chargeCurrency: string;
   createdAt: string;
@@ -68,6 +70,8 @@ type OrderRow = {
   cart_id: string | null;
   checkout_session_id: string | null;
   shipping_address: ShippingAddressDto | null;
+  discount_code: string | null;
+  discount_amount_minor: string | number;
   total_amount_minor: string | number;
   charge_currency: string;
   created_at: Date | string;
@@ -103,6 +107,7 @@ export class OrdersService {
       const res = await client.query<OrderRow>(
         `SELECT o.id, o.status, o.payment_status, o.payment_method, o.guest_email, o.customer_id,
                 o.cart_id, o.checkout_session_id, o.shipping_address,
+                o.discount_code, COALESCE(o.discount_amount_minor, 0) AS discount_amount_minor,
                 o.total_amount_minor, o.charge_currency, o.created_at, o.updated_at,
                 COALESCE(COUNT(ol.id), 0) AS line_count
          FROM orders o
@@ -192,6 +197,7 @@ export class OrdersService {
     const res = await client.query<OrderRow>(
       `SELECT id, status, payment_status, payment_method, guest_email, customer_id,
               cart_id, checkout_session_id, shipping_address,
+              discount_code, COALESCE(discount_amount_minor, 0) AS discount_amount_minor,
               total_amount_minor, charge_currency, created_at, updated_at
        FROM orders
        WHERE id = $1`,
@@ -232,6 +238,8 @@ export class OrdersService {
       paymentMethod: row.payment_method,
       guestEmail: row.guest_email,
       customerId: row.customer_id,
+      discountCode: row.discount_code ?? null,
+      discountAmountMinor: asMinor(row.discount_amount_minor ?? 0),
       totalAmountMinor: asMinor(row.total_amount_minor),
       chargeCurrency: row.charge_currency,
       createdAt: asIso(row.created_at),

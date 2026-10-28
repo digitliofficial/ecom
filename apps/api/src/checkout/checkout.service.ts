@@ -15,6 +15,8 @@ import {
   createGuestToken,
   hashAccessToken,
 } from '../common/guest-token';
+import { DiscountsService } from '../discounts/discounts.service';
+import { InventoryService } from '../inventory/inventory.service';
 import {
   PaymentsService,
   type BankDetails,
@@ -46,6 +48,9 @@ export type CheckoutResult = {
     status: 'pending' | 'placed';
     paymentStatus: string;
     paymentMethod: OfflinePaymentMethod;
+    subtotalAmountMinor: number;
+    discountCode: string | null;
+    discountAmountMinor: number;
     totalAmountMinor: number;
     currency: string;
     accessToken: string;
@@ -66,6 +71,8 @@ export class CheckoutService {
     private readonly carts: CartService,
     private readonly compute: ComputeClientService,
     private readonly paymentsConfig: PaymentsService,
+    private readonly discounts: DiscountsService,
+    private readonly inventory: InventoryService,
   ) {}
 
   async createSession(
@@ -75,6 +82,7 @@ export class CheckoutService {
       email: string;
       shippingAddress: ShippingAddressInput;
       paymentMethod: string;
+      discountCode?: string | null;
       customerId?: string | null;
     },
   ): Promise<CheckoutResult> {
@@ -115,28 +123,55 @@ export class CheckoutService {
       country: input.shippingAddress.country,
     });
 
-    const total = cart.lines.reduce(
+    const subtotal = cart.lines.reduce(
       (sum, l) => sum + l.unitAmountMinor * l.quantity,
       0,
     );
     const currency = cart.chargeCurrency ?? cart.lines[0]?.currency ?? 'USD';
-
-    // Offline PaymentProvider adapters (COD / bank transfer). Stripe/Noop stay optional.
-    const provider = offlineProviderFor(paymentMethod);
-    const payment = await provider.createPayment({
-      tenantId,
-      amountMinor: total,
-      currency,
-      metadata: { paymentMethod },
-    });
-
-    const orderStatus: 'pending' | 'placed' = 'placed';
-    const paymentStatus = payment.status;
+    const discountCode = input.discountCode?.trim() || null;
 
     const accessToken = createGuestToken();
     const accessTokenHash = hashAccessToken(accessToken);
 
     return this.db.withTenant(tenantId, async (client) => {
+      let discountAmountMinor = 0;
+      let appliedCode: string | null = null;
+      let appliedType: string | null = null;
+
+      if (discountCode) {
+        const applied = await this.discounts.applyCoupon(
+          client,
+          discountCode,
+          subtotal,
+          currency,
+        );
+        discountAmountMinor = applied.discountAmountMinor;
+        appliedCode = applied.code;
+        appliedType = applied.type;
+      }
+
+      const total = Math.max(0, subtotal - discountAmountMinor);
+
+      await this.inventory.decrementForOrderLines(
+        client,
+        cart.lines.map((l) => ({
+          variantId: l.variantId,
+          quantity: l.quantity,
+        })),
+      );
+
+      // Offline PaymentProvider adapters (COD / bank transfer). Stripe/Noop stay optional.
+      const provider = offlineProviderFor(paymentMethod);
+      const payment = await provider.createPayment({
+        tenantId,
+        amountMinor: total,
+        currency,
+        metadata: { paymentMethod },
+      });
+
+      const orderStatus: 'pending' | 'placed' = 'placed';
+      const paymentStatus = payment.status;
+
       const session = await client.query<{ id: string }>(
         `INSERT INTO checkout_sessions
            (tenant_id, cart_id, guest_email, shipping_address,
@@ -166,8 +201,10 @@ export class CheckoutService {
         `INSERT INTO orders
            (tenant_id, cart_id, checkout_session_id, status, payment_status,
             payment_method, guest_email, customer_id, shipping_address,
-            charge_currency, total_amount_minor, access_token_hash)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)
+            charge_currency, total_amount_minor, access_token_hash,
+            discount_code, discount_amount_minor, discount_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12,
+                 $13, $14, $15)
          RETURNING id`,
         [
           tenantId,
@@ -182,6 +219,9 @@ export class CheckoutService {
           currency,
           total,
           accessTokenHash,
+          appliedCode,
+          discountAmountMinor,
+          appliedType,
         ],
       );
 
@@ -223,6 +263,9 @@ export class CheckoutService {
           status: orderStatus,
           paymentStatus,
           paymentMethod,
+          subtotalAmountMinor: subtotal,
+          discountCode: appliedCode,
+          discountAmountMinor,
           totalAmountMinor: total,
           currency,
           accessToken,

@@ -77,6 +77,8 @@ export type OrderLine = {
 
 export type OfflinePaymentMethod = 'cod' | 'bank_transfer';
 
+export type DiscountType = 'percentage' | 'fixed';
+
 export type Order = {
   id: string;
   tenantId: string;
@@ -87,6 +89,9 @@ export type Order = {
   paymentMethod?: OfflinePaymentMethod | string | null;
   guestEmail?: string | null;
   customerId?: string | null;
+  discountCode?: string | null;
+  discountAmountMinor?: number;
+  discountType?: DiscountType | string | null;
   totalAmountMinor: number;
   chargeCurrency: string;
   shippingAddress?: Record<string, unknown> | null;
@@ -124,4 +129,49 @@ export type ProductVariant = {
   unitAmountMinor: number;
   currency: string;
   inventoryQuantity?: number;
+};
+
+export type CollectionStatus = 'active' | 'draft' | 'archived';
+
+export type Collection = {
+  id: string;
+  tenantId?: string;
+  slug: string;
+  title: string;
+  description?: string | null;
+  status: CollectionStatus | string;
+  productIds?: string[];
+  productCount?: number;
+};
+
+export type Discount = {
+  id: string;
+  tenantId?: string;
+  code: string;
+  title: string;
+  type: DiscountType;
+  value: number;
+  currency: string;
+  minSubtotalMinor: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  usageLimit?: number | null;
+  usageCount?: number;
+  active: boolean;
+};
+
+export type Location = {
+  id: string;
+  tenantId?: string;
+  name: string;
+  code: string;
+  isDefault: boolean;
+  active: boolean;
+};
+
+export type InventoryLevel = {
+  id: string;
+  locationId: string;
+  variantId: string;
+  quantity: number;
 };

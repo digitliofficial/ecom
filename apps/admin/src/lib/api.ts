@@ -7,10 +7,21 @@ import {
   type AdminOrderSummary,
   type AuthResult,
   type AuthUser,
+  type Collection,
+  type CollectionCreateInput,
+  type CollectionUpdateInput,
+  type Discount,
+  type DiscountCreateInput,
+  type DiscountUpdateInput,
+  type InventoryLevel,
+  type InventoryLocation,
+  type LocationCreateInput,
+  type LocationUpdateInput,
   type PaymentSettingsUpdate,
   type Product,
   type ProductCreateInput,
   type ProductUpdateInput,
+  type SetStockInput,
   type TenantPaymentSettings,
 } from '@ecom/sdk-api';
 import {
@@ -102,6 +113,83 @@ export async function updateAdminPaymentSettings(
   body: PaymentSettingsUpdate,
 ): Promise<TenantPaymentSettings> {
   return client().updateAdminPaymentSettings(body);
+}
+
+export async function listAdminCollections(): Promise<Collection[]> {
+  return client().listAdminCollections();
+}
+
+export async function getAdminCollection(id: string): Promise<Collection> {
+  return client().getAdminCollection(id);
+}
+
+export async function createAdminCollection(
+  body: CollectionCreateInput,
+): Promise<Collection> {
+  return client().createAdminCollection(body);
+}
+
+export async function updateAdminCollection(
+  id: string,
+  body: CollectionUpdateInput,
+): Promise<Collection> {
+  return client().updateAdminCollection(id, body);
+}
+
+export async function deleteAdminCollection(id: string): Promise<void> {
+  return client().deleteAdminCollection(id);
+}
+
+export async function listAdminDiscounts(): Promise<Discount[]> {
+  return client().listAdminDiscounts();
+}
+
+export async function getAdminDiscount(id: string): Promise<Discount> {
+  return client().getAdminDiscount(id);
+}
+
+export async function createAdminDiscount(
+  body: DiscountCreateInput,
+): Promise<Discount> {
+  return client().createAdminDiscount(body);
+}
+
+export async function updateAdminDiscount(
+  id: string,
+  body: DiscountUpdateInput,
+): Promise<Discount> {
+  return client().updateAdminDiscount(id, body);
+}
+
+export async function deleteAdminDiscount(id: string): Promise<void> {
+  return client().deleteAdminDiscount(id);
+}
+
+export async function listAdminLocations(): Promise<InventoryLocation[]> {
+  return client().listAdminLocations();
+}
+
+export async function createAdminLocation(
+  body: LocationCreateInput,
+): Promise<InventoryLocation> {
+  return client().createAdminLocation(body);
+}
+
+export async function updateAdminLocation(
+  id: string,
+  body: LocationUpdateInput,
+): Promise<InventoryLocation> {
+  return client().updateAdminLocation(id, body);
+}
+
+export async function listAdminInventoryLevels(): Promise<InventoryLevel[]> {
+  return client().listAdminInventoryLevels();
+}
+
+export async function setAdminInventoryLevel(
+  body: SetStockInput,
+): Promise<InventoryLevel> {
+  return client().setAdminInventoryLevel(body);
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {
