@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub, platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR**, platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -27,7 +27,7 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
-# If the Postgres volume predates catalog/admin/auth/payments/shipping SQL, re-apply idempotent init:
+# If the Postgres volume predates catalog/admin/auth/payments/shipping/privacy SQL, re-apply idempotent init:
 pnpm db:apply
 # Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
@@ -71,11 +71,40 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — …/shipping/fulfillments/domains+analytics applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — …/shipping/fulfillments/domains+analytics/localization/privacy applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
 Then re-check (any shell): `curl -sS -H 'x-tenant-host: demo.localhost' http://localhost:3001/v1/catalog/products`
+
+
+### Privacy — cookie consent + DSAR (local)
+
+```bash
+pnpm db:apply                       # 13-privacy.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/storefront dev  # :3005 → /en
+```
+
+1. Storefront shows a **cookie consent** banner (necessary always on; analytics/marketing opt-in). Choices POST to `/v1/privacy/consent`.
+2. Open http://localhost:3005/en/privacy — signed-in customers can **Export my data** or **Delete** (password confirm). Guests use checkout email + order access token.
+3. Admin **Privacy** — DPA, retention, banner layout/categories, policy URLs, and DSAR inbox.
+
+```bash
+# Public banner config
+curl -sS -H 'Host: demo.localhost' http://localhost:3001/v1/privacy/config
+
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/privacy/settings
+
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/privacy/dsar
+```
 
 ### Auth / demo credentials
 

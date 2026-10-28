@@ -197,6 +197,31 @@ export type StorefrontLocalization = {
   fxDisclaimer?: string | null;
 };
 
+export type CookieBannerLayout = 'bottom' | 'modal';
+
+export type TenantPrivacySettings = {
+  dpaAcknowledged: boolean;
+  retentionDays: number;
+  privacyContactEmail?: string | null;
+  cookieBannerEnabled: boolean;
+  cookieBannerLayout: CookieBannerLayout;
+  analyticsCategoryEnabled: boolean;
+  marketingCategoryEnabled: boolean;
+  privacyPolicyUrl?: string | null;
+  cookiePolicyUrl?: string | null;
+};
+
+export type DsarRequestType = 'export' | 'delete';
+
+export type DsarRequest = {
+  id: string;
+  tenantId: string;
+  requestType: DsarRequestType;
+  status: string;
+  subjectEmail: string;
+  customerId?: string | null;
+};
+
 export type ProductStatus = 'active' | 'draft' | 'archived';
 
 export type Product = {

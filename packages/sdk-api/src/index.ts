@@ -240,6 +240,73 @@ export type StorefrontLocalization = {
   fxDisclaimer: string | null;
 };
 
+export type CookieBannerLayout = 'bottom' | 'modal';
+
+export type StorefrontPrivacyConfig = {
+  cookieBannerEnabled: boolean;
+  cookieBannerLayout: CookieBannerLayout;
+  analyticsCategoryEnabled: boolean;
+  marketingCategoryEnabled: boolean;
+  privacyPolicyUrl: string | null;
+  cookiePolicyUrl: string | null;
+  privacyContactEmail: string | null;
+};
+
+export type TenantPrivacySettings = StorefrontPrivacyConfig & {
+  dpaAcknowledged: boolean;
+  dpaAcknowledgedAt: string | null;
+  retentionDays: number;
+  updatedAt?: string;
+};
+
+export type PrivacySettingsUpdate = {
+  dpaAcknowledged?: boolean;
+  retentionDays?: number;
+  privacyContactEmail?: string | null;
+  cookieBannerEnabled?: boolean;
+  cookieBannerLayout?: CookieBannerLayout;
+  analyticsCategoryEnabled?: boolean;
+  marketingCategoryEnabled?: boolean;
+  privacyPolicyUrl?: string | null;
+  cookiePolicyUrl?: string | null;
+};
+
+export type ConsentCategories = {
+  necessary: true;
+  analytics: boolean;
+  marketing: boolean;
+};
+
+export type ConsentEvent = {
+  id: string;
+  subjectKey: string;
+  categories: ConsentCategories;
+  source: string;
+  createdAt: string;
+};
+
+export type DsarRequestType = 'export' | 'delete';
+
+export type DsarRequestSummary = {
+  id: string;
+  requestType: DsarRequestType;
+  status: string;
+  subjectEmail: string;
+  subjectKind: 'customer' | 'guest';
+  customerId: string | null;
+  actorKind: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  artifactExpiresAt: string | null;
+  hasArtifact: boolean;
+  errorMessage: string | null;
+};
+
+export type DsarRequestDetail = DsarRequestSummary & {
+  artifact: Record<string, unknown> | null;
+};
+
 export type CheckoutSessionResult = {
   id: string;
   cartId: string;
@@ -649,6 +716,67 @@ export class ApiClient {
 
   getAdminAnalyticsSummary(): Promise<AnalyticsSummary> {
     return this.get<AnalyticsSummary>('/v1/admin/analytics/summary');
+  }
+
+  getPrivacyConfig(): Promise<StorefrontPrivacyConfig> {
+    return this.get<StorefrontPrivacyConfig>('/v1/privacy/config');
+  }
+
+  recordConsent(body: {
+    subjectKey: string;
+    analytics?: boolean;
+    marketing?: boolean;
+    source?: string;
+  }): Promise<ConsentEvent> {
+    return this.post<ConsentEvent>('/v1/privacy/consent', body);
+  }
+
+  createGuestDsar(body: {
+    requestType: DsarRequestType;
+    email: string;
+    orderAccessToken: string;
+  }): Promise<DsarRequestDetail> {
+    return this.post<DsarRequestDetail>('/v1/privacy/dsar/guest', body);
+  }
+
+  listCustomerDsar(): Promise<DsarRequestSummary[]> {
+    return this.get<DsarRequestSummary[]>('/v1/privacy/account/dsar');
+  }
+
+  getCustomerDsar(id: string): Promise<DsarRequestDetail> {
+    return this.get<DsarRequestDetail>(`/v1/privacy/account/dsar/${id}`);
+  }
+
+  createCustomerExport(): Promise<DsarRequestDetail> {
+    return this.post<DsarRequestDetail>('/v1/privacy/account/dsar/export', {});
+  }
+
+  createCustomerDelete(body: { password: string }): Promise<DsarRequestDetail> {
+    return this.post<DsarRequestDetail>(
+      '/v1/privacy/account/dsar/delete',
+      body,
+    );
+  }
+
+  getAdminPrivacySettings(): Promise<TenantPrivacySettings> {
+    return this.get<TenantPrivacySettings>('/v1/admin/privacy/settings');
+  }
+
+  updateAdminPrivacySettings(
+    body: PrivacySettingsUpdate,
+  ): Promise<TenantPrivacySettings> {
+    return this.patch<TenantPrivacySettings>(
+      '/v1/admin/privacy/settings',
+      body,
+    );
+  }
+
+  listAdminDsar(): Promise<DsarRequestSummary[]> {
+    return this.get<DsarRequestSummary[]>('/v1/admin/privacy/dsar');
+  }
+
+  getAdminDsar(id: string): Promise<DsarRequestDetail> {
+    return this.get<DsarRequestDetail>(`/v1/admin/privacy/dsar/${id}`);
   }
 }
 
