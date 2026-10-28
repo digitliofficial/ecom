@@ -9,6 +9,9 @@ import {
   type AuthResult,
   type AuthUser,
   type CreateAdminFulfillmentInput,
+  type Menu,
+  type MenuHandle,
+  type MenuUpdateInput,
   type DomainsConfig,
   type DsarRequestDetail,
   type DsarRequestSummary,
@@ -23,8 +26,16 @@ import {
   type ShippingMethodUpdate,
   type TenantDomain,
   type TenantLocalizationSettings,
+  type Policy,
+  type PolicyKind,
+  type PolicyUpdateInput,
+  type SeoSettings,
+  type SeoSettingsUpdate,
   type TenantPaymentSettings,
   type TenantPrivacySettings,
+  type ThemeSettings,
+  type ThemeSettingsUpdate,
+  type ThemeTokens,
   type UpdateAdminFulfillmentInput,
 } from '@ecom/sdk-api';
 import {
@@ -204,6 +215,56 @@ export async function listAdminDsar(): Promise<DsarRequestSummary[]> {
 
 export async function getAdminDsar(id: string): Promise<DsarRequestDetail> {
   return client().getAdminDsar(id);
+}
+
+
+export async function listThemePacks(): Promise<ThemeTokens[]> {
+  return client().listThemePacks();
+}
+
+export async function getAdminTheme(): Promise<ThemeSettings> {
+  return client().getAdminTheme();
+}
+
+export async function updateAdminTheme(
+  body: ThemeSettingsUpdate,
+): Promise<ThemeSettings> {
+  return client().updateAdminTheme(body);
+}
+
+export async function getAdminSeo(locale = 'en'): Promise<SeoSettings> {
+  return client().getAdminSeo(locale);
+}
+
+export async function updateAdminSeo(
+  body: SeoSettingsUpdate,
+): Promise<SeoSettings> {
+  return client().updateAdminSeo(body);
+}
+
+export async function getAdminMenu(
+  handle: MenuHandle,
+  locale = 'en',
+): Promise<Menu> {
+  return client().getAdminMenu(handle, locale);
+}
+
+export async function replaceAdminMenu(
+  handle: MenuHandle,
+  body: MenuUpdateInput,
+): Promise<Menu> {
+  return client().replaceAdminMenu(handle, body);
+}
+
+export async function listAdminPolicies(locale = 'en'): Promise<Policy[]> {
+  return client().listAdminPolicies(locale);
+}
+
+export async function updateAdminPolicy(
+  kind: PolicyKind,
+  body: PolicyUpdateInput,
+): Promise<Policy> {
+  return client().updateAdminPolicy(kind, body);
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {

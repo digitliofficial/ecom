@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR**, platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy + CMS** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR** + **CMS** (menus, SEO, theme packs, policy pages), platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -27,7 +27,7 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
-# If the Postgres volume predates catalog/admin/auth/payments/shipping/privacy SQL, re-apply idempotent init:
+# If the Postgres volume predates catalog/admin/auth/payments/shipping/privacy/cms SQL, re-apply idempotent init:
 pnpm db:apply
 # Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
@@ -71,7 +71,7 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — …/shipping/fulfillments/domains+analytics/localization/privacy applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — …/shipping/fulfillments/domains+analytics/localization/privacy/cms applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
@@ -290,6 +290,34 @@ curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
   http://localhost:3001/v1/admin/localization/settings
 
 curl -sS -H 'Host: demo.localhost' http://localhost:3001/v1/localization
+```
+
+
+### CMS — menus, SEO, theme, policies (local)
+
+```bash
+pnpm db:apply                       # 14-cms.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/storefront dev  # :3005
+```
+
+1. Open http://localhost:3002/login — `owner@demo.localhost` / `DemoOwner123!`.
+2. Go to **CMS** — pick a theme pack (`default` / `daylight` / `midnight`), edit SEO title/description, header/footer menu items, and policy page copy.
+3. Storefront at http://localhost:3005/en uses `/v1/cms/bootstrap` for shell chrome, meta tags, and footer links. Policy pages live at `/en/policies/{privacy|refund|terms|shipping|cookie}`.
+
+```bash
+curl -sS -H 'Host: demo.localhost' 'http://localhost:3001/v1/cms/bootstrap?locale=en'
+curl -sS -H 'Host: demo.localhost' http://localhost:3001/v1/cms/policies/privacy
+
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"themePackId":"midnight"}' \
+  http://localhost:3001/v1/admin/cms/theme
 ```
 
 ### Merchant orders admin (local)

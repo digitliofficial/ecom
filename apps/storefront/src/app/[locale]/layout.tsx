@@ -1,78 +1,48 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { defaultTheme } from '@ecom/themes';
-import { AccountAuth } from '../../components/AccountAuth';
-import { CookieConsentBanner } from '../../components/CookieConsentBanner';
-import { StorefrontSwitchers } from '../../components/StorefrontSwitchers';
+import { StoreShell } from '../../components/StoreShell';
+import { fetchCmsBootstrap } from '../../lib/cms';
+
+type LocaleLayoutProps = {
+  children: ReactNode;
+  params: Promise<{ locale: string }>;
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const cms = await fetchCmsBootstrap(locale);
+  if (!cms) {
+    return { title: 'ecom · demo' };
+  }
+  return {
+    title: cms.seo.siteTitle,
+    description: cms.seo.metaDescription || undefined,
+    openGraph: cms.seo.ogImageUrl
+      ? {
+          title: cms.seo.siteTitle,
+          description: cms.seo.metaDescription || undefined,
+          images: [cms.seo.ogImageUrl],
+        }
+      : {
+          title: cms.seo.siteTitle,
+          description: cms.seo.metaDescription || undefined,
+        },
+  };
+}
 
 export default async function LocaleLayout({
   children,
   params,
-}: {
-  children: ReactNode;
-  params: Promise<{ locale: string }>;
-}) {
+}: LocaleLayoutProps) {
   const { locale } = await params;
-  const t = defaultTheme.colors;
+  const cms = await fetchCmsBootstrap(locale);
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: `linear-gradient(165deg, ${t.background} 0%, #1a2430 45%, #243447 100%)`,
-        color: t.foreground,
-      }}
-      lang={locale}
-    >
-      <header
-        style={{
-          padding: '1.25rem 1.5rem',
-          letterSpacing: '0.08em',
-          fontSize: '0.85rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: '1rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            gap: '1rem',
-            alignItems: 'baseline',
-            flexWrap: 'wrap',
-          }}
-        >
-          <Link
-            href={`/${locale}`}
-            style={{ color: 'inherit', textDecoration: 'none' }}
-          >
-            ecom · demo
-          </Link>
-          <span style={{ opacity: 0.65, letterSpacing: '0.04em' }}>
-            guest + account checkout
-          </span>
-          <Link
-            href={`/${locale}/privacy`}
-            style={{ color: 'inherit', opacity: 0.8, textDecoration: 'underline' }}
-          >
-            Privacy
-          </Link>
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            gap: '1rem',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          <StorefrontSwitchers locale={locale} />
-          <AccountAuth />
-        </div>
-      </header>
-      <main style={{ padding: '0 1.5rem 5rem' }}>{children}</main>
-      <CookieConsentBanner locale={locale} />
-    </div>
+    <StoreShell locale={locale} cms={cms}>
+      {children}
+    </StoreShell>
   );
 }
