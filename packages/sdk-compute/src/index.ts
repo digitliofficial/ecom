@@ -33,7 +33,11 @@ export type ShippingRate = {
 };
 
 export class ComputeClient {
-  constructor(private readonly opts: SdkComputeOptions) {}
+  private readonly opts: SdkComputeOptions;
+
+  constructor(opts: SdkComputeOptions) {
+    this.opts = opts;
+  }
 
   async health(): Promise<{ status: string }> {
     const res = await fetch(`${this.opts.baseUrl}/health`);
