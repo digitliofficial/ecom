@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.couriers.port import CourierPort, LabelResult, Rate, TrackingEvent
@@ -34,7 +34,7 @@ class AggregatorStubAdapter(CourierPort):
 
     def create_shipment(self, payload: dict[str, Any]) -> LabelResult:
         order_id = str(payload.get("orderId") or "")
-        suffix = (order_id[:8] if order_id else datetime.now(timezone.utc).strftime("%H%M%S")).upper()
+        suffix = (order_id[:8] if order_id else datetime.now(UTC).strftime("%H%M%S")).upper()
         return LabelResult(
             tracking_number=f"AGG-{suffix}",
             label_url=f"https://example.invalid/labels/{suffix}",
@@ -47,7 +47,7 @@ class AggregatorStubAdapter(CourierPort):
             TrackingEvent(
                 status="in_transit",
                 description=f"Aggregator stub tracking for {tracking_number}",
-                occurred_at=datetime.now(timezone.utc).isoformat(),
+                occurred_at=datetime.now(UTC).isoformat(),
                 provider_event_id=f"stub_{tracking_number}",
             )
         ]
