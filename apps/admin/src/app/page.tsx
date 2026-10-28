@@ -1,18 +1,16 @@
-import Link from 'next/link';
-import { t } from '@ecom/i18n-messages';
+import { cookies } from 'next/headers';
+import { AdminShell } from '../components/AdminShell';
+import { ADMIN_STUB_COOKIE, parseStubSessionValue } from '../lib/auth-session';
 
-export default function AdminHome() {
+export default async function AdminHome() {
+  const jar = await cookies();
+  const session = parseStubSessionValue(jar.get(ADMIN_STUB_COOKIE)?.value);
+  const email = session?.email ?? 'staff@merchant.com';
+
   return (
-    <div style={{ padding: '2rem', maxWidth: 800 }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h1 style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>ecom admin</h1>
-        <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.95rem' }}>
-          <Link href="/login">{t('en', 'admin.login')}</Link>
-          <Link href="/localization">Localization</Link>
-        </nav>
-      </header>
+    <AdminShell email={email}>
       <p style={{ marginTop: '1.5rem', maxWidth: 480 }}>
-        Merchant admin shell — login stub, tenant switcher stub, Localization settings shell.
+        Signed in (stub). Tenant switcher and Localization settings shell below.
       </p>
       <div style={{ marginTop: '2rem', padding: '1rem 0', borderTop: '1px solid #cfc8bc' }}>
         <label style={{ display: 'grid', gap: '0.4rem', maxWidth: 280 }}>
@@ -22,6 +20,6 @@ export default function AdminHome() {
           </select>
         </label>
       </div>
-    </div>
+    </AdminShell>
   );
 }

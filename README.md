@@ -48,7 +48,9 @@ App DB user for RLS: `ecom_app` / `ecom` (see `.env.example`). Owner `ecom` bypa
 
 ### Auth / passwords
 
-**No app-level demo users or passwords** for storefront, merchant admin, or platform admin yet. Storefront is guest checkout (no login). Admin login is a UI stub (`Continue (stub)`). Platform admin is a placeholder shell. API `AuthService` accepts any non-empty Bearer token as a Phase 0 stub (returns `stub-user` / `staff`) — not real JWT verification. Seeds create tenants/catalog only, not staff accounts. Local Postgres passwords above are the only credentials.
+**Merchant admin (`:3002`) — local stub only.** Open `/login`, enter any non-empty email + password (no seed accounts). Submit sets a client cookie + `localStorage` flag (`ecom_admin_stub_session`) and redirects to the signed-in shell at `/`. Sign out clears the stub session. This is not real authentication.
+
+Storefront is guest checkout (no login). Platform admin remains a placeholder shell. API `AuthService` accepts any non-empty Bearer token as a Phase 0 stub (returns `stub-user` / `staff`) — not real JWT verification. Seeds create tenants/catalog only, not staff accounts. Local Postgres passwords above are the only DB credentials.
 
 ### Guest checkout smoke
 
