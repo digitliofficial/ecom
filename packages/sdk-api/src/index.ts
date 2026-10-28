@@ -153,6 +153,56 @@ export type ShippingMethodCreate = {
 
 export type ShippingMethodUpdate = Partial<ShippingMethodCreate>;
 
+export type DomainVerificationStatus = 'pending' | 'verified' | 'failed';
+export type DomainSslStatus = 'pending' | 'active' | 'error';
+
+export type TenantDomain = {
+  id: string;
+  host: string;
+  isPrimary: boolean;
+  verificationStatus: DomainVerificationStatus;
+  verifiedAt: string | null;
+  sslStatus: DomainSslStatus;
+  createdAt: string;
+};
+
+export type CnameInstructions = {
+  cnameHost: string;
+  cnameTarget: string;
+  ttlHint: string;
+  notes: string[];
+};
+
+export type DomainsConfig = {
+  domains: TenantDomain[];
+  cname: CnameInstructions;
+  platformHosts: string[];
+};
+
+export type AnalyticsEventInput = {
+  eventName: string;
+  path?: string | null;
+  sessionId?: string | null;
+  properties?: Record<string, unknown> | null;
+  occurredAt?: string | null;
+};
+
+export type AnalyticsEvent = {
+  id: string;
+  eventName: string;
+  path: string | null;
+  sessionId: string | null;
+  properties: Record<string, unknown>;
+  occurredAt: string;
+};
+
+export type AnalyticsSummary = {
+  totalEvents: number;
+  byEventName: Array<{ eventName: string; count: number }>;
+  recent: AnalyticsEvent[];
+  stub: true;
+};
+
 export type CheckoutSessionResult = {
   id: string;
   cartId: string;
@@ -512,6 +562,37 @@ export class ApiClient {
       `/v1/admin/orders/${orderId}/fulfillments/${fulfillmentId}`,
       body,
     );
+  }
+
+  getAdminDomains(): Promise<DomainsConfig> {
+    return this.get<DomainsConfig>('/v1/admin/domains');
+  }
+
+  getCnameInstructions(): Promise<CnameInstructions> {
+    return this.get<CnameInstructions>('/v1/admin/domains/cname-instructions');
+  }
+
+  addAdminDomain(body: {
+    host: string;
+    isPrimary?: boolean;
+  }): Promise<TenantDomain> {
+    return this.post<TenantDomain>('/v1/admin/domains', body);
+  }
+
+  verifyAdminDomain(id: string): Promise<TenantDomain> {
+    return this.post<TenantDomain>(`/v1/admin/domains/${id}/verify`, {});
+  }
+
+  removeAdminDomain(id: string): Promise<void> {
+    return this.delete<void>(`/v1/admin/domains/${id}`);
+  }
+
+  ingestAnalyticsEvent(body: AnalyticsEventInput): Promise<AnalyticsEvent> {
+    return this.post<AnalyticsEvent>('/v1/analytics/events', body);
+  }
+
+  getAdminAnalyticsSummary(): Promise<AnalyticsSummary> {
+    return this.get<AnalyticsSummary>('/v1/admin/analytics/summary');
   }
 }
 

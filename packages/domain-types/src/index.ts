@@ -15,11 +15,35 @@ export type Tenant = {
   dataRegion?: string | null;
 };
 
+export type DomainVerificationStatus = 'pending' | 'verified' | 'failed';
+export type DomainSslStatus = 'pending' | 'active' | 'error';
+
 export type TenantDomain = {
   id: string;
   tenantId: string;
   host: string;
   isPrimary: boolean;
+  verificationStatus?: DomainVerificationStatus;
+  verifiedAt?: string | null;
+  sslStatus?: DomainSslStatus;
+};
+
+export type AnalyticsEventName =
+  | 'page_view'
+  | 'product_view'
+  | 'add_to_cart'
+  | 'begin_checkout'
+  | 'purchase'
+  | 'custom';
+
+export type AnalyticsEvent = {
+  id: string;
+  tenantId: string;
+  eventName: AnalyticsEventName | string;
+  path?: string | null;
+  sessionId?: string | null;
+  properties?: Record<string, unknown>;
+  occurredAt: string;
 };
 
 export type CartStatus = 'active' | 'converted' | 'abandoned';
