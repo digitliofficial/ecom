@@ -8,6 +8,7 @@ import {
   type Product,
   type ShippingAddress,
   type StorefrontPaymentMethod,
+  type StorefrontShippingMethod,
 } from '@ecom/sdk-api';
 import { readCustomerBearer } from './customer-session';
 
@@ -119,10 +120,17 @@ export async function listPaymentMethods(): Promise<StorefrontPaymentMethod[]> {
   return client().listPaymentMethods();
 }
 
+export async function listShippingMethods(
+  paymentMethod?: OfflinePaymentMethod,
+): Promise<StorefrontShippingMethod[]> {
+  return client().listShippingMethods(paymentMethod);
+}
+
 export async function checkout(input: {
   email: string;
   shippingAddress: ShippingAddress;
   paymentMethod: OfflinePaymentMethod;
+  shippingMethodId: string;
 }): Promise<CheckoutSessionResult> {
   const cart = await ensureCart();
   const result = await client().createCheckoutSession({
@@ -130,6 +138,7 @@ export async function checkout(input: {
     email: input.email,
     shippingAddress: input.shippingAddress,
     paymentMethod: input.paymentMethod,
+    shippingMethodId: input.shippingMethodId,
   });
   clearCartToken();
   return result;

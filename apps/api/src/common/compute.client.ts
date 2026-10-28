@@ -3,6 +3,10 @@ import {
   createComputeClient,
   type AddressValidateRequest,
   type AddressValidateResponse,
+  type CreateShipmentRequest,
+  type LabelResult,
+  type ShippingRatesRequest,
+  type ShippingRate,
 } from '@ecom/sdk-compute';
 
 @Injectable()
@@ -24,5 +28,15 @@ export class ComputeClientService {
         normalized: body,
       };
     }
+  }
+
+  async shippingRates(
+    body: ShippingRatesRequest,
+  ): Promise<{ rates: ShippingRate[] }> {
+    return this.client.shippingRates(body);
+  }
+
+  async createShipment(body: CreateShipmentRequest): Promise<LabelResult> {
+    return this.client.createShipment(body);
   }
 }

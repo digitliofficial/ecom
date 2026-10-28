@@ -33,12 +33,17 @@ export class AdminOrdersController {
   updateStatus(
     @Req() req: TenantRequest,
     @Param('id') id: string,
-    @Body() body: { status?: OrderStatusUpdate },
+    @Body()
+    body: {
+      status?: OrderStatusUpdate;
+      trackingNumber?: string | null;
+      trackingCarrier?: string | null;
+    },
   ) {
-    return this.orders.updateAdminOrderStatus(
-      req.tenantId!,
-      id,
-      body?.status as OrderStatusUpdate,
-    );
+    return this.orders.updateAdminOrderStatus(req.tenantId!, id, {
+      status: body?.status as OrderStatusUpdate,
+      trackingNumber: body?.trackingNumber,
+      trackingCarrier: body?.trackingCarrier,
+    });
   }
 }

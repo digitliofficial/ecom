@@ -11,6 +11,9 @@ import {
   type Product,
   type ProductCreateInput,
   type ProductUpdateInput,
+  type ShippingMethod,
+  type ShippingMethodCreate,
+  type ShippingMethodUpdate,
   type TenantPaymentSettings,
 } from '@ecom/sdk-api';
 import {
@@ -90,8 +93,30 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetail> {
 export async function updateAdminOrderStatus(
   id: string,
   status: AdminOrderStatusUpdate,
+  tracking?: { trackingNumber?: string | null; trackingCarrier?: string | null },
 ): Promise<AdminOrderDetail> {
-  return client().updateAdminOrderStatus(id, { status });
+  return client().updateAdminOrderStatus(id, {
+    status,
+    trackingNumber: tracking?.trackingNumber,
+    trackingCarrier: tracking?.trackingCarrier,
+  });
+}
+
+export async function listAdminShippingMethods(): Promise<ShippingMethod[]> {
+  return client().listAdminShippingMethods();
+}
+
+export async function createAdminShippingMethod(
+  body: ShippingMethodCreate,
+): Promise<ShippingMethod> {
+  return client().createAdminShippingMethod(body);
+}
+
+export async function updateAdminShippingMethod(
+  id: string,
+  body: ShippingMethodUpdate,
+): Promise<ShippingMethod> {
+  return client().updateAdminShippingMethod(id, body);
 }
 
 export async function getAdminPaymentSettings(): Promise<TenantPaymentSettings> {

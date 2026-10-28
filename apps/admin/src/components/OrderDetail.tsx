@@ -23,6 +23,12 @@ export function OrderDetail({ initial }: OrderDetailProps) {
   const [order, setOrder] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<AdminOrderStatusUpdate | null>(null);
+  const [trackingNumber, setTrackingNumber] = useState(
+    initial.trackingNumber ?? '',
+  );
+  const [trackingCarrier, setTrackingCarrier] = useState(
+    initial.trackingCarrier ?? '',
+  );
 
   const canAct = order.status === 'placed' || order.status === 'pending';
 
@@ -30,8 +36,19 @@ export function OrderDetail({ initial }: OrderDetailProps) {
     setError(null);
     setBusy(status);
     try {
-      const updated = await updateAdminOrderStatus(order.id, status);
+      const updated = await updateAdminOrderStatus(
+        order.id,
+        status,
+        status === 'cancelled'
+          ? undefined
+          : {
+              trackingNumber: trackingNumber.trim() || null,
+              trackingCarrier: trackingCarrier.trim() || null,
+            },
+      );
       setOrder(updated);
+      setTrackingNumber(updated.trackingNumber ?? '');
+      setTrackingCarrier(updated.trackingCarrier ?? '');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update failed');
@@ -62,6 +79,13 @@ export function OrderDetail({ initial }: OrderDetailProps) {
           <p style={{ margin: '0.25rem 0 0', fontWeight: 600 }}>
             {formatMoney(order.totalAmountMinor, order.chargeCurrency)}
           </p>
+          {order.shippingAmountMinor > 0 || order.shippingMethodName ? (
+            <p style={{ margin: '0.15rem 0 0', fontSize: '0.85rem', opacity: 0.75 }}>
+              incl. shipping{' '}
+              {formatMoney(order.shippingAmountMinor, order.chargeCurrency)}
+              {order.shippingMethodName ? ` (${order.shippingMethodName})` : ''}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -101,7 +125,7 @@ export function OrderDetail({ initial }: OrderDetailProps) {
         </div>
         {addr ? (
           <div>
-            <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Shipping</dt>
+            <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Shipping address</dt>
             <dd style={{ margin: 0, lineHeight: 1.5 }}>
               {addr.line1}
               {addr.line2 ? (
@@ -114,6 +138,21 @@ export function OrderDetail({ initial }: OrderDetailProps) {
               {[addr.city, addr.region, addr.postalCode].filter(Boolean).join(', ')}
               <br />
               {addr.country}
+            </dd>
+          </div>
+        ) : null}
+        {order.shippingMethodName ? (
+          <div>
+            <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Shipping method</dt>
+            <dd style={{ margin: 0 }}>{order.shippingMethodName}</dd>
+          </div>
+        ) : null}
+        {order.trackingNumber ? (
+          <div>
+            <dt style={{ opacity: 0.7, fontSize: '0.85rem' }}>Tracking</dt>
+            <dd style={{ margin: 0 }}>
+              <code>{order.trackingNumber}</code>
+              {order.trackingCarrier ? ` · ${order.trackingCarrier}` : ''}
             </dd>
           </div>
         ) : null}
@@ -149,29 +188,71 @@ export function OrderDetail({ initial }: OrderDetailProps) {
       ) : null}
 
       {canAct ? (
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {ACTIONS.map(({ status, label }) => (
-            <button
-              key={status}
-              type="button"
-              disabled={busy !== null}
-              onClick={() => void applyStatus(status)}
-              style={{
-                padding: '0.5rem 0.85rem',
-                cursor: busy !== null ? 'wait' : 'pointer',
-                border:
-                  status === 'cancelled'
-                    ? '1px solid #b91c1c'
-                    : '1px solid #57534e',
-                background: status === 'cancelled' ? 'transparent' : '#1c1917',
-                color: status === 'cancelled' ? '#b91c1c' : '#fafaf9',
-                borderRadius: 4,
-                opacity: busy !== null && busy !== status ? 0.55 : 1,
-              }}
-            >
-              {busy === status ? 'Saving…' : label}
-            </button>
-          ))}
+        <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div
+            style={{
+              display: 'grid',
+              gap: '0.65rem',
+              maxWidth: 420,
+              padding: '0.85rem 0',
+              borderTop: '1px solid #cfc8bc',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>
+              Optional tracking when fulfilling or marking shipped (manual entry;
+              aggregator stub can mint a number if left blank).
+            </p>
+            <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.9rem' }}>
+              <span>Tracking number</span>
+              <input
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="e.g. TCS-123456"
+                style={{
+                  padding: '0.45rem 0.6rem',
+                  borderRadius: 4,
+                  border: '1px solid #a8a29e',
+                }}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.9rem' }}>
+              <span>Carrier</span>
+              <input
+                value={trackingCarrier}
+                onChange={(e) => setTrackingCarrier(e.target.value)}
+                placeholder="e.g. TCS / manual"
+                style={{
+                  padding: '0.45rem 0.6rem',
+                  borderRadius: 4,
+                  border: '1px solid #a8a29e',
+                }}
+              />
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {ACTIONS.map(({ status, label }) => (
+              <button
+                key={status}
+                type="button"
+                disabled={busy !== null}
+                onClick={() => void applyStatus(status)}
+                style={{
+                  padding: '0.5rem 0.85rem',
+                  cursor: busy !== null ? 'wait' : 'pointer',
+                  border:
+                    status === 'cancelled'
+                      ? '1px solid #b91c1c'
+                      : '1px solid #57534e',
+                  background: status === 'cancelled' ? 'transparent' : '#1c1917',
+                  color: status === 'cancelled' ? '#b91c1c' : '#fafaf9',
+                  borderRadius: 4,
+                  opacity: busy !== null && busy !== status ? 0.55 : 1,
+                }}
+              >
+                {busy === status ? 'Saving…' : label}
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
         <p style={{ margin: 0, opacity: 0.75, fontSize: '0.9rem' }}>

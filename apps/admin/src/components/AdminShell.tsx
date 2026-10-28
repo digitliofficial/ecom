@@ -36,6 +36,7 @@ export function AdminShell({ email, children }: AdminShellProps) {
           <Link href="/products">Products</Link>
           <Link href="/orders">Orders</Link>
           <Link href="/payments">Payments</Link>
+          <Link href="/shipping">Shipping</Link>
           <Link href="/localization">Localization</Link>
           <span style={{ opacity: 0.75, fontSize: '0.85rem' }}>{email}</span>
           <button
