@@ -117,7 +117,6 @@ export class B2bService {
     },
   ): Promise<PriceListDto> {
     await this.requireB2b(tenantId);
-    await this.entitlements.require(tenantId, 'feature_b2b');
 
     return this.db.withTenant(tenantId, async (client) => {
       const existing = await client.query<{
