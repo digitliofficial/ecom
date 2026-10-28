@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`), FastAPI address stub, storefront flow, merchant admin product CRUD + order fulfill/ship/cancel + payment settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**.
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + collections/discounts/multi-location inventory** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`), optional coupon codes, FastAPI address stub, storefront collection filter, merchant admin product/collection/discount/inventory CRUD + order fulfill/ship/cancel + payment settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**.
 
 ## Stack
 
@@ -71,7 +71,7 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve/catalog admin/auth/payments applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — …/collections/discounts/inventory applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
@@ -225,6 +225,73 @@ curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
 ```
 
 Allowed status updates from `placed` (or `pending`): `fulfilled`, `shipped`, `cancelled`.
+
+### Collections, discounts & multi-location inventory (local)
+
+```bash
+pnpm db:apply                       # 09-collections-discounts-inventory.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/storefront dev  # :3005 → /en
+```
+
+**Collections**
+
+1. Admin → **Collections** → create (title/slug) and tick products to assign.
+2. Storefront: filter chips on the home page, or open http://localhost:3005/en/collections/featured (demo seed).
+3. API: `GET /v1/catalog/products?collection=featured` and `GET /v1/catalog/collections/:slug`.
+
+**Discounts**
+
+1. Admin → **Discounts** → create percentage (e.g. `10`) or fixed (minor units, e.g. `500` = $5).
+2. Demo seeds: `SAVE10` (10%) and `FLAT5` ($5).
+3. Storefront checkout → optional **Discount code** field → order total reflects the coupon; usage count increments.
+
+**Inventory**
+
+1. Admin → **Inventory** — default location `MAIN` is seeded; add more locations; set stock per variant/location.
+2. Product form inventory qty syncs to the **default** location (other locations preserved).
+3. Checkout decrements stock (default location first, then others) and refreshes variant `inventoryQuantity` as the sum.
+
+```bash
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+# Collections
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/collections
+
+curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Summer","slug":"summer","status":"active","productIds":["20000000-0000-4000-8000-000000000001"]}' \
+  http://localhost:3001/v1/admin/collections
+
+curl -sS -H 'Host: demo.localhost' \
+  'http://localhost:3001/v1/catalog/products?collection=featured'
+
+# Discounts
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/discounts
+
+# Inventory locations + set stock
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/inventory/locations
+
+curl -sS -X PUT -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"locationId":"40000000-0000-4000-8000-000000000001","variantId":"30000000-0000-4000-8000-000000000001","quantity":40}' \
+  http://localhost:3001/v1/admin/inventory/levels
+```
+
+Checkout with coupon (after creating a cart + line):
+
+```bash
+curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -H "X-Cart-Token: $GUEST_TOKEN" \
+  -d '{"cartId":"'"$CART_ID"'","email":"guest@example.com","paymentMethod":"cod","discountCode":"SAVE10","shippingAddress":{"line1":"12 Clifton","city":"Karachi","country":"PK"}}' \
+  http://localhost:3001/v1/checkout/sessions
+```
 
 ## Workspace layout
 

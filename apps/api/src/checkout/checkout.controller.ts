@@ -31,6 +31,7 @@ export class CheckoutController {
       email?: string;
       shippingAddress?: ShippingAddressInput;
       paymentMethod?: string;
+      discountCode?: string;
     },
   ) {
     const customer = this.auth.optionalCustomerClaims(req);
@@ -71,6 +72,7 @@ export class CheckoutController {
       email,
       shippingAddress: body.shippingAddress,
       paymentMethod: body.paymentMethod,
+      discountCode: body.discountCode,
       customerId: customer?.sub ?? null,
     });
   }

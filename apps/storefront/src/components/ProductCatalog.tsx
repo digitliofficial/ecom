@@ -2,20 +2,39 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import type { Product } from '@ecom/sdk-api';
-import { addToCart, formatMoney, listProducts } from '../lib/api';
+import type { Collection, Product } from '@ecom/sdk-api';
+import {
+  addToCart,
+  formatMoney,
+  listCollections,
+  listProducts,
+} from '../lib/api';
 
-export function ProductCatalog({ locale }: { locale: string }) {
+export function ProductCatalog({
+  locale,
+  collectionSlug,
+}: {
+  locale: string;
+  collectionSlug?: string;
+}) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     let cancelled = false;
-    listProducts()
-      .then((data) => {
-        if (!cancelled) setProducts(data);
+    Promise.all([
+      listProducts(
+        collectionSlug ? { collection: collectionSlug } : undefined,
+      ),
+      listCollections(),
+    ])
+      .then(([productData, collectionData]) => {
+        if (cancelled) return;
+        setProducts(productData);
+        setCollections(collectionData);
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);
@@ -23,7 +42,9 @@ export function ProductCatalog({ locale }: { locale: string }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [collectionSlug]);
+
+  const activeCollection = collections.find((c) => c.slug === collectionSlug);
 
   return (
     <section style={{ maxWidth: 720, paddingTop: '3rem' }}>
@@ -41,9 +62,48 @@ export function ProductCatalog({ locale }: { locale: string }) {
         ecom
       </h1>
       <p style={{ fontSize: '1.1rem', maxWidth: 440, lineHeight: 1.5, opacity: 0.9 }}>
-        Guest checkout slice — add a demo product, review the cart, place an order
-        without charging.
+        {activeCollection
+          ? activeCollection.description ||
+            `Browsing collection “${activeCollection.title}”.`
+          : 'Guest checkout slice — add a demo product, apply a coupon, place an order.'}
       </p>
+
+      {collections.length > 0 && (
+        <nav
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            marginTop: '1.5rem',
+            fontSize: '0.95rem',
+          }}
+          aria-label="Collections"
+        >
+          <Link
+            href={`/${locale}`}
+            style={{
+              color: collectionSlug ? '#9ec1ff' : '#fff',
+              textDecoration: collectionSlug ? 'underline' : 'none',
+              fontWeight: collectionSlug ? 400 : 600,
+            }}
+          >
+            All
+          </Link>
+          {collections.map((c) => (
+            <Link
+              key={c.id}
+              href={`/${locale}/collections/${c.slug}`}
+              style={{
+                color: collectionSlug === c.slug ? '#fff' : '#9ec1ff',
+                textDecoration: collectionSlug === c.slug ? 'none' : 'underline',
+                fontWeight: collectionSlug === c.slug ? 600 : 400,
+              }}
+            >
+              {c.title}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {error && (
         <p style={{ color: '#ff8e8e', marginTop: '1.5rem' }}>
@@ -63,6 +123,9 @@ export function ProductCatalog({ locale }: { locale: string }) {
           gap: '1.5rem',
         }}
       >
+        {!products.length && !error && (
+          <li style={{ opacity: 0.75 }}>No products in this view.</li>
+        )}
         {products.map((product) => {
           const variant = product.variants[0];
           if (!variant) return null;

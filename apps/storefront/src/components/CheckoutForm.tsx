@@ -58,6 +58,7 @@ export function CheckoutForm({ locale }: { locale: string }) {
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
       try {
+        const discountRaw = String(fd.get('discountCode') ?? '').trim();
         const session = await checkout({
           email: String(fd.get('email') ?? ''),
           shippingAddress: {
@@ -69,6 +70,7 @@ export function CheckoutForm({ locale }: { locale: string }) {
             country: String(fd.get('country') ?? 'PK'),
           },
           paymentMethod,
+          discountCode: discountRaw || undefined,
         });
         setResult(session);
         setError(null);
@@ -89,7 +91,11 @@ export function CheckoutForm({ locale }: { locale: string }) {
           Order <code>{result.order.id}</code> is{' '}
           <strong>{result.order.status}</strong> (
           {result.order.paymentMethod} · {result.order.paymentStatus}). Total{' '}
-          {formatMoney(result.order.totalAmountMinor, result.order.currency)}.
+          {formatMoney(result.order.totalAmountMinor, result.order.currency)}
+          {result.order.discountCode
+            ? ` (coupon ${result.order.discountCode} saved ${formatMoney(result.order.discountAmountMinor ?? 0, result.order.currency)})`
+            : ''}
+          .
         </p>
         {result.order.paymentMethod === 'cod' && (
           <p style={{ opacity: 0.85 }}>
@@ -205,6 +211,16 @@ export function CheckoutForm({ locale }: { locale: string }) {
             <input name="country" required defaultValue="PK" style={field} />
           </label>
         </div>
+
+        <label style={{ display: 'grid', gap: '0.35rem' }}>
+          <span>Discount code (optional)</span>
+          <input
+            name="discountCode"
+            placeholder="SAVE10"
+            autoComplete="off"
+            style={field}
+          />
+        </label>
 
         <fieldset
           style={{
