@@ -11,7 +11,8 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:apply": "bash scripts/db-apply.sh"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

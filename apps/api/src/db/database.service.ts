@@ -1,5 +1,18 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import {
+  Injectable,
+  OnModuleDestroy,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { Pool, type PoolClient, type QueryResultRow, type DatabaseError } from 'pg';
+
+function isUndefinedFunction(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as DatabaseError).code === '42883'
+  );
+}
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
@@ -52,10 +65,19 @@ export class DatabaseService implements OnModuleDestroy {
 
   async resolveTenantIdByHost(host: string): Promise<string | null> {
     const normalized = host.split(':')[0]?.toLowerCase() ?? '';
-    const res = await this.pool.query<{ id: string }>(
-      `SELECT resolve_tenant_id_by_host($1)::text AS id`,
-      [normalized],
-    );
-    return res.rows[0]?.id ?? null;
+    try {
+      const res = await this.pool.query<{ id: string }>(
+        `SELECT resolve_tenant_id_by_host($1)::text AS id`,
+        [normalized],
+      );
+      return res.rows[0]?.id ?? null;
+    } catch (err) {
+      if (isUndefinedFunction(err)) {
+        throw new ServiceUnavailableException(
+          'Database schema is outdated (missing resolve_tenant_id_by_host). Run `pnpm db:apply`, or reset local demo data with `docker compose down -v && docker compose up -d`.',
+        );
+      }
+      throw err;
+    }
   }
 }
