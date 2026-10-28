@@ -70,12 +70,15 @@ export type Order = {
   chargeCurrency: string;
 };
 
+export type ProductStatus = 'active' | 'draft' | 'archived';
+
 export type Product = {
   id: string;
   tenantId: string;
   slug: string;
   title: string;
   description?: string | null;
+  status?: ProductStatus | string;
 };
 
 export type ProductVariant = {
@@ -86,4 +89,5 @@ export type ProductVariant = {
   title: string;
   unitAmountMinor: number;
   currency: string;
+  inventoryQuantity?: number;
 };

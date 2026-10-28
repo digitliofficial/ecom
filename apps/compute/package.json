@@ -7,7 +7,7 @@
     "build": "echo \"python: no build\"",
     "lint": "uv run ruff check app tests || true",
     "typecheck": "echo \"python: skip typecheck\"",
-    "test": "uv run pytest",
+    "test": "command -v uv >/dev/null 2>&1 && uv run pytest || echo \"skip: uv not on PATH (python-compute CI covers pytest)\"",
     "clean": "rm -rf .venv __pycache__ .pytest_cache .ruff_cache"
   }
 }

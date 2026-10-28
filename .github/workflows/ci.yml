@@ -49,7 +49,8 @@ jobs:
             psql -h localhost -U ecom -d ecom -v ON_ERROR_STOP=1 -f "$f"
           done
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec turbo run lint typecheck test build
+      # @ecom/compute is exercised by the python-compute job (needs uv).
+      - run: pnpm exec turbo run lint typecheck test build --filter=!@ecom/compute
 
   python-compute:
     name: compute-ruff-pytest

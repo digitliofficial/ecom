@@ -33,6 +33,7 @@ export function AdminShell({ email, children }: AdminShellProps) {
         <h1 style={{ fontWeight: 600, letterSpacing: '-0.02em', margin: 0 }}>ecom admin</h1>
         <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.95rem', alignItems: 'center' }}>
           <Link href="/">Dashboard</Link>
+          <Link href="/products">Products</Link>
           <Link href="/localization">Localization</Link>
           <span style={{ opacity: 0.75, fontSize: '0.85rem' }}>{email}</span>
           <button

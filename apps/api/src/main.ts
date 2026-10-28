@@ -9,6 +9,9 @@ async function bootstrap() {
       'http://localhost:3005',
       'http://127.0.0.1:3005',
       'http://demo.localhost:3005',
+      'http://localhost:3002',
+      'http://127.0.0.1:3002',
+      'http://demo.localhost:3002',
     ],
     credentials: true,
     allowedHeaders: [
