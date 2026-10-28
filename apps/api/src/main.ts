@@ -6,9 +6,9 @@ async function bootstrap() {
   app.setGlobalPrefix('v1', { exclude: ['health'] });
   app.enableCors({
     origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://demo.localhost:3000',
+      'http://localhost:3005',
+      'http://127.0.0.1:3005',
+      'http://demo.localhost:3005',
     ],
     credentials: true,
     allowedHeaders: [
