@@ -40,10 +40,11 @@ export default async function AdminHome() {
     <AdminShell email={email}>
       <p style={{ marginTop: '1.5rem', maxWidth: 560 }}>
         Signed in as demo tenant staff. Manage catalog, orders (split
-        fulfillments), offline payments, shipping methods, custom domains,
-        analytics ingest, CMS (menus / SEO / theme / policies), privacy
-        (cookie consent + DSAR), notifications (lifecycle + abandoned cart),
-        localization (multi-language / multi-currency), and plan metering.
+        fulfillments), review moderation, B2B groups/price lists, offline
+        payments, shipping methods, custom domains, analytics ingest, CMS
+        (menus / SEO / theme / policies), privacy (cookie consent + DSAR),
+        notifications (lifecycle + abandoned cart), localization
+        (multi-language / multi-currency), and plan metering.
       </p>
       <ul style={{ marginTop: '1.25rem', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
         <li>
@@ -51,6 +52,12 @@ export default async function AdminHome() {
         </li>
         <li>
           <Link href="/orders">Orders</Link> — list / detail / fulfill · ship · cancel
+        </li>
+        <li>
+          <Link href="/reviews">Reviews</Link> — approve / reject product reviews
+        </li>
+        <li>
+          <Link href="/b2b">B2B</Link> — customer groups + price lists
         </li>
         <li>
           <Link href="/payments">Payments</Link> — COD + bank transfer settings

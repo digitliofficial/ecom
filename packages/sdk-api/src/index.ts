@@ -78,6 +78,8 @@ export type ProductVariant = {
   unitAmountMinor: number;
   currency: string;
   inventoryQuantity: number;
+  priceSource?: 'retail' | 'price_list';
+  compareAtAmountMinor?: number;
 };
 
 export type Product = {
@@ -86,7 +88,83 @@ export type Product = {
   title: string;
   description: string | null;
   status: string;
+  ratingAvg?: number;
+  ratingCount?: number;
   variants: ProductVariant[];
+};
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export type ProductReview = {
+  id: string;
+  productId: string;
+  customerId: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  locale: string;
+  status: ReviewStatus;
+  verifiedPurchase: boolean;
+  authorDisplayName: string | null;
+  createdAt: string;
+  moderatedAt: string | null;
+};
+
+export type ProductRatingSummary = {
+  productId: string;
+  ratingAvg: number;
+  ratingCount: number;
+};
+
+export type WishlistItem = {
+  id: string;
+  variantId: string;
+  productId: string;
+  productTitle: string;
+  productSlug: string;
+  variantTitle: string;
+  sku: string;
+  unitAmountMinor: number;
+  currency: string;
+  inventoryQuantity: number;
+  priceSource: 'retail' | 'price_list';
+  createdAt: string;
+};
+
+export type Wishlist = {
+  id: string;
+  customerId: string;
+  items: WishlistItem[];
+};
+
+export type PriceListItem = {
+  id: string;
+  variantId: string;
+  unitAmountMinor: number;
+  currency: string;
+  sku?: string;
+  variantTitle?: string;
+};
+
+export type PriceList = {
+  id: string;
+  name: string;
+  currency: string;
+  items: PriceListItem[];
+};
+
+export type CustomerGroupMember = {
+  customerId: string;
+  email: string;
+  displayName: string | null;
+};
+
+export type CustomerGroup = {
+  id: string;
+  name: string;
+  priceListId: string | null;
+  memberCount: number;
+  members: CustomerGroupMember[];
 };
 
 export type VariantInput = {
@@ -1273,6 +1351,127 @@ export class ApiClient {
     );
   }
 
+  getWishlist(): Promise<Wishlist> {
+    return this.get<Wishlist>('/v1/wishlist');
+  }
+
+  addWishlistItem(body: { variantId: string }): Promise<Wishlist> {
+    return this.post<Wishlist>('/v1/wishlist/items', body);
+  }
+
+  removeWishlistItem(variantId: string): Promise<Wishlist> {
+    return this.delete<Wishlist>(`/v1/wishlist/items/${variantId}`);
+  }
+
+  listProductReviews(productId: string): Promise<ProductReview[]> {
+    return this.get<ProductReview[]>(
+      `/v1/catalog/products/${productId}/reviews`,
+    );
+  }
+
+  getProductRating(productId: string): Promise<ProductRatingSummary> {
+    return this.get<ProductRatingSummary>(
+      `/v1/catalog/products/${productId}/rating`,
+    );
+  }
+
+  createProductReview(
+    productId: string,
+    body: { rating: number; title?: string; body: string; locale?: string },
+  ): Promise<ProductReview> {
+    return this.post<ProductReview>(
+      `/v1/catalog/products/${productId}/reviews`,
+      body,
+    );
+  }
+
+  listAdminReviews(status?: ReviewStatus): Promise<ProductReview[]> {
+    const q = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.get<ProductReview[]>(`/v1/admin/reviews${q}`);
+  }
+
+  moderateAdminReview(
+    id: string,
+    body: { status: ReviewStatus },
+  ): Promise<ProductReview> {
+    return this.patch<ProductReview>(`/v1/admin/reviews/${id}`, body);
+  }
+
+  listAdminPriceLists(): Promise<PriceList[]> {
+    return this.get<PriceList[]>('/v1/admin/b2b/price-lists');
+  }
+
+  createAdminPriceList(body: {
+    name: string;
+    currency?: string;
+    items?: {
+      variantId: string;
+      unitAmountMinor: number;
+      currency?: string;
+    }[];
+  }): Promise<PriceList> {
+    return this.post<PriceList>('/v1/admin/b2b/price-lists', body);
+  }
+
+  updateAdminPriceList(
+    id: string,
+    body: {
+      name?: string;
+      currency?: string;
+      items?: {
+        variantId: string;
+        unitAmountMinor: number;
+        currency?: string;
+      }[];
+    },
+  ): Promise<PriceList> {
+    return this.patch<PriceList>(`/v1/admin/b2b/price-lists/${id}`, body);
+  }
+
+  listAdminCustomerGroups(): Promise<CustomerGroup[]> {
+    return this.get<CustomerGroup[]>('/v1/admin/b2b/customer-groups');
+  }
+
+  createAdminCustomerGroup(body: {
+    name: string;
+    priceListId?: string | null;
+    customerIds?: string[];
+  }): Promise<CustomerGroup> {
+    return this.post<CustomerGroup>('/v1/admin/b2b/customer-groups', body);
+  }
+
+  updateAdminCustomerGroup(
+    id: string,
+    body: {
+      name?: string;
+      priceListId?: string | null;
+      customerIds?: string[];
+    },
+  ): Promise<CustomerGroup> {
+    return this.patch<CustomerGroup>(
+      `/v1/admin/b2b/customer-groups/${id}`,
+      body,
+    );
+  }
+
+  addAdminCustomerGroupMember(
+    groupId: string,
+    body: { customerId: string },
+  ): Promise<CustomerGroup> {
+    return this.post<CustomerGroup>(
+      `/v1/admin/b2b/customer-groups/${groupId}/members`,
+      body,
+    );
+  }
+
+  removeAdminCustomerGroupMember(
+    groupId: string,
+    customerId: string,
+  ): Promise<CustomerGroup> {
+    return this.delete<CustomerGroup>(
+      `/v1/admin/b2b/customer-groups/${groupId}/members/${customerId}`,
+    );
+  }
 }
 
 export function createApiClient(opts: SdkApiOptions): ApiClient {

@@ -9,10 +9,12 @@ import {
   type Policy,
   type PolicyKind,
   type Product,
+  type ProductReview,
   type ShippingAddress,
   type StorefrontLocalization,
   type StorefrontPaymentMethod,
   type StorefrontShippingMethod,
+  type Wishlist,
 } from '@ecom/sdk-api';
 import { readCustomerBearer } from './customer-session';
 import { readDisplayCurrency } from './display-currency';
@@ -58,6 +60,31 @@ function client() {
 
 export async function listProducts(): Promise<Product[]> {
   return client().listProducts();
+}
+
+export async function getWishlist(): Promise<Wishlist> {
+  return client().getWishlist();
+}
+
+export async function addWishlistItem(variantId: string): Promise<Wishlist> {
+  return client().addWishlistItem({ variantId });
+}
+
+export async function removeWishlistItem(variantId: string): Promise<Wishlist> {
+  return client().removeWishlistItem(variantId);
+}
+
+export async function listProductReviews(
+  productId: string,
+): Promise<ProductReview[]> {
+  return client().listProductReviews(productId);
+}
+
+export async function createProductReview(
+  productId: string,
+  body: { rating: number; title?: string; body: string; locale?: string },
+): Promise<ProductReview> {
+  return client().createProductReview(productId, body);
 }
 
 export async function fetchCurrentCart(): Promise<Cart | null> {

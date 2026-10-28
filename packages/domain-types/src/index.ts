@@ -261,6 +261,8 @@ export type Product = {
   title: string;
   description?: string | null;
   status?: ProductStatus | string;
+  ratingAvg?: number;
+  ratingCount?: number;
 };
 
 export type ProductVariant = {
@@ -272,6 +274,52 @@ export type ProductVariant = {
   unitAmountMinor: number;
   currency: string;
   inventoryQuantity?: number;
+  priceSource?: 'retail' | 'price_list';
+  compareAtAmountMinor?: number;
+};
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export type ProductReview = {
+  id: string;
+  productId: string;
+  customerId: string;
+  rating: number;
+  title?: string | null;
+  body: string;
+  locale: string;
+  status: ReviewStatus;
+  verifiedPurchase: boolean;
+};
+
+export type WishlistItem = {
+  id: string;
+  variantId: string;
+  productId: string;
+  unitAmountMinor: number;
+  currency: string;
+};
+
+export type CustomerGroup = {
+  id: string;
+  tenantId: string;
+  name: string;
+  priceListId?: string | null;
+};
+
+export type PriceList = {
+  id: string;
+  tenantId: string;
+  name: string;
+  currency: string;
+};
+
+export type PriceListItem = {
+  id: string;
+  priceListId: string;
+  variantId: string;
+  unitAmountMinor: number;
+  currency: string;
 };
 
 export type MigrationSource = 'shopify_api' | 'csv' | 'fixture';

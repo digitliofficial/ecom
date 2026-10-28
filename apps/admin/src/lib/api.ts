@@ -9,6 +9,7 @@ import {
   type AuthResult,
   type AuthUser,
   type CreateAdminFulfillmentInput,
+  type CustomerGroup,
   type Menu,
   type MenuHandle,
   type MenuUpdateInput,
@@ -19,10 +20,13 @@ import {
   type NotificationSettingsUpdate,
   type PaymentSettingsUpdate,
   type PlanView,
+  type PriceList,
   type PrivacySettingsUpdate,
   type Product,
   type ProductCreateInput,
+  type ProductReview,
   type ProductUpdateInput,
+  type ReviewStatus,
   type SoftLimitWarning,
   type StaffMember,
   type StripeBillingStubResult,
@@ -357,6 +361,87 @@ export async function disableTenantLocale(
   locale: string,
 ): Promise<{ ok: boolean }> {
   return client().disableTenantLocale(locale);
+}
+
+export async function listAdminReviews(
+  status?: ReviewStatus,
+): Promise<ProductReview[]> {
+  return client().listAdminReviews(status);
+}
+
+export async function moderateAdminReview(
+  id: string,
+  status: ReviewStatus,
+): Promise<ProductReview> {
+  return client().moderateAdminReview(id, { status });
+}
+
+export async function listAdminPriceLists(): Promise<PriceList[]> {
+  return client().listAdminPriceLists();
+}
+
+export async function createAdminPriceList(body: {
+  name: string;
+  currency?: string;
+  items?: {
+    variantId: string;
+    unitAmountMinor: number;
+    currency?: string;
+  }[];
+}): Promise<PriceList> {
+  return client().createAdminPriceList(body);
+}
+
+export async function updateAdminPriceList(
+  id: string,
+  body: {
+    name?: string;
+    currency?: string;
+    items?: {
+      variantId: string;
+      unitAmountMinor: number;
+      currency?: string;
+    }[];
+  },
+): Promise<PriceList> {
+  return client().updateAdminPriceList(id, body);
+}
+
+export async function listAdminCustomerGroups(): Promise<CustomerGroup[]> {
+  return client().listAdminCustomerGroups();
+}
+
+export async function createAdminCustomerGroup(body: {
+  name: string;
+  priceListId?: string | null;
+  customerIds?: string[];
+}): Promise<CustomerGroup> {
+  return client().createAdminCustomerGroup(body);
+}
+
+export async function updateAdminCustomerGroup(
+  id: string,
+  body: {
+    name?: string;
+    priceListId?: string | null;
+    customerIds?: string[];
+  },
+): Promise<CustomerGroup> {
+  return client().updateAdminCustomerGroup(id, body);
+}
+
+export async function addAdminCustomerGroupMember(
+  groupId: string,
+  customerId: string,
+): Promise<CustomerGroup> {
+  return client().addAdminCustomerGroupMember(groupId, { customerId });
+}
+
+export async function removeAdminCustomerGroupMember(
+  groupId: string,
+  customerId: string,
+): Promise<CustomerGroup> {
+  return client().removeAdminCustomerGroupMember(groupId, customerId);
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {

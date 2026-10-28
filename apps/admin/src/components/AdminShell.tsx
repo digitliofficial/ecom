@@ -35,6 +35,8 @@ export function AdminShell({ email, children }: AdminShellProps) {
           <Link href="/">Dashboard</Link>
           <Link href="/products">Products</Link>
           <Link href="/orders">Orders</Link>
+          <Link href="/reviews">Reviews</Link>
+          <Link href="/b2b">B2B</Link>
           <Link href="/payments">Payments</Link>
           <Link href="/shipping">Shipping</Link>
           <Link href="/domains">Domains</Link>

@@ -69,12 +69,33 @@ export function ProductCatalog({ locale }: { locale: string }) {
           return (
             <li key={product.id} style={{ borderTop: '1px solid #3a4a5c', paddingTop: '1.25rem' }}>
               <h2 style={{ margin: '0 0 0.35rem', fontSize: '1.35rem', fontWeight: 500 }}>
-                {product.title}
+                <Link
+                  href={`/${locale}/products/${product.slug}`}
+                  style={{ color: 'inherit', textDecoration: 'none' }}
+                >
+                  {product.title}
+                </Link>
               </h2>
-              <p style={{ margin: '0 0 1rem', opacity: 0.8 }}>{product.description}</p>
+              <p style={{ margin: '0 0 0.5rem', opacity: 0.8 }}>{product.description}</p>
+              {(product.ratingCount ?? 0) > 0 && (
+                <p style={{ margin: '0 0 1rem', opacity: 0.7, fontSize: '0.9rem' }}>
+                  {product.ratingAvg?.toFixed(1)} ★ · {product.ratingCount} reviews
+                </p>
+              )}
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {formatMoney(variant.unitAmountMinor, variant.currency)}
+                  {variant.compareAtAmountMinor != null && (
+                    <span
+                      style={{
+                        opacity: 0.55,
+                        marginLeft: '0.45rem',
+                        textDecoration: 'line-through',
+                      }}
+                    >
+                      {formatMoney(variant.compareAtAmountMinor, variant.currency)}
+                    </span>
+                  )}
                 </span>
                 <button
                   type="button"
@@ -100,15 +121,24 @@ export function ProductCatalog({ locale }: { locale: string }) {
                 >
                   Add to cart
                 </button>
+                <Link
+                  href={`/${locale}/products/${product.slug}`}
+                  style={{ color: '#9ec1ff', fontSize: '0.95rem' }}
+                >
+                  Reviews
+                </Link>
               </div>
             </li>
           );
         })}
       </ul>
 
-      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '2.5rem' }}>
+      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '2.5rem', flexWrap: 'wrap' }}>
         <Link href={`/${locale}/cart`} style={{ color: '#9ec1ff' }}>
           View cart
+        </Link>
+        <Link href={`/${locale}/wishlist`} style={{ color: '#9ec1ff' }}>
+          Wishlist
         </Link>
         <Link href={`/${locale}/checkout`} style={{ color: '#9ec1ff' }}>
           Checkout

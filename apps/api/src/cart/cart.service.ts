@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import type { PoolClient } from 'pg';
+import { B2bPricingService } from '../b2b/b2b-pricing.service';
 import { DatabaseService } from '../db/database.service';
 import { createGuestToken } from '../common/guest-token';
 import { AbandonedCartService } from '../notifications/abandoned-cart.service';
@@ -34,6 +35,7 @@ export class CartService {
   constructor(
     private readonly db: DatabaseService,
     private readonly abandonedCart: AbandonedCartService,
+    private readonly pricing: B2bPricingService,
   ) {}
 
   async createGuestCart(
@@ -154,6 +156,12 @@ export class CartService {
       if (!variant.rows[0]) {
         throw new NotFoundException('Variant not found');
       }
+      const resolved = await this.pricing.resolveVariantPriceWithClient(
+        client,
+        tenantId,
+        input.variantId,
+        cart.customer_id,
+      );
       const existing = await client.query<{ id: string }>(
         `SELECT id FROM cart_lines WHERE cart_id = $1 AND variant_id = $2 LIMIT 1`,
         [cartId, input.variantId],
@@ -173,8 +181,8 @@ export class CartService {
             cartId,
             input.variantId,
             input.quantity,
-            Number(variant.rows[0].unit_amount_minor),
-            variant.rows[0].currency,
+            resolved.unitAmountMinor,
+            resolved.currency,
           ],
         );
       }
