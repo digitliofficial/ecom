@@ -14,6 +14,8 @@ async function bootstrap() {
       'http://localhost:3002',
       'http://127.0.0.1:3002',
       'http://demo.localhost:3002',
+      'http://localhost:3003',
+      'http://127.0.0.1:3003',
     ],
     credentials: true,
     allowedHeaders: [
@@ -22,6 +24,7 @@ async function bootstrap() {
       'X-Cart-Token',
       'X-Forwarded-Host',
       'X-Tenant-Host',
+      'X-Platform-Key',
       'Cookie',
     ],
   });

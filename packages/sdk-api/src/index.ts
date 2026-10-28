@@ -5,8 +5,42 @@ export type SdkApiOptions = {
   getToken?: () => string | undefined;
   getHost?: () => string | undefined;
   getCartToken?: () => string | undefined;
+  /** Platform ops key for /v1/platform/* (migration). */
+  getPlatformKey?: () => string | undefined;
   /** Send cookies (httpOnly session). Default false. */
   credentials?: RequestCredentials;
+};
+
+export type MigrationSource = 'shopify_api' | 'csv' | 'fixture';
+
+export type MigrationEntityType =
+  | 'products'
+  | 'customers'
+  | 'orders'
+  | 'redirects';
+
+export type MigrationJob = {
+  id: string;
+  tenantId: string;
+  source: MigrationSource;
+  entityTypes: MigrationEntityType[];
+  status: string;
+  shopDomain: string | null;
+  stats: Record<string, unknown>;
+  error: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+export type CreateMigrationJobInput = {
+  tenantId: string;
+  source: MigrationSource;
+  entityTypes: MigrationEntityType[];
+  shopDomain?: string;
+  accessToken?: string;
+  csv?: Partial<Record<'products' | 'customers', string>>;
+  fixture?: Record<string, unknown>;
 };
 
 export type ShippingAddress = {
@@ -1018,6 +1052,52 @@ export class ApiClient {
       `/v1/admin/cms/policies/${encodeURIComponent(kind)}`,
       body,
     );
+  }
+
+  listMigrationJobs(tenantId?: string): Promise<MigrationJob[]> {
+    const q = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : '';
+    return this.platformGet<MigrationJob[]>(`/v1/platform/migration/jobs${q}`);
+  }
+
+  createMigrationJob(body: CreateMigrationJobInput): Promise<MigrationJob> {
+    return this.platformPost<MigrationJob>('/v1/platform/migration/jobs', body);
+  }
+
+  getMigrationJob(id: string): Promise<MigrationJob> {
+    return this.platformGet<MigrationJob>(
+      `/v1/platform/migration/jobs/${id}`,
+    );
+  }
+
+  runMigrationJob(id: string): Promise<MigrationJob> {
+    return this.platformPost<MigrationJob>(
+      `/v1/platform/migration/jobs/${id}/run`,
+      {},
+    );
+  }
+
+  private platformHeaders(): Record<string, string> {
+    const headers = this.headers({ 'Content-Type': 'application/json' });
+    const key =
+      this.opts.getPlatformKey?.() ?? 'ecom-local-platform-key-change-me';
+    headers['X-Platform-Key'] = key;
+    return headers;
+  }
+
+  private async platformGet<T>(path: string): Promise<T> {
+    const res = await fetch(`${this.opts.baseUrl}${path}`, {
+      headers: this.platformHeaders(),
+    });
+    return this.parse<T>(res, 'GET', path);
+  }
+
+  private async platformPost<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${this.opts.baseUrl}${path}`, {
+      method: 'POST',
+      headers: this.platformHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.parse<T>(res, 'POST', path);
   }
 }
 

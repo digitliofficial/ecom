@@ -12,7 +12,8 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
-    "db:apply": "node scripts/db-apply.mjs"
+    "db:apply": "node scripts/db-apply.mjs",
+    "migrate:shopify": "node scripts/shopify-migrate.mjs"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
