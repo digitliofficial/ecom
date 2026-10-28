@@ -57,7 +57,7 @@ describe('admin orders', () => {
     await app.close();
   });
 
-  async function placeGuestOrder(email: string) {
+  async function placeGuestOrder(email: string, quantity = 1) {
     const created = await request(server)
       .post('/v1/carts')
       .set('Host', DEMO_HOST)
@@ -71,7 +71,7 @@ describe('admin orders', () => {
       .post(`/v1/carts/${cartId}/lines`)
       .set('Host', DEMO_HOST)
       .set('X-Cart-Token', guestToken)
-      .send({ variantId: DEMO_VARIANT, quantity: 1 })
+      .send({ variantId: DEMO_VARIANT, quantity })
       .expect(201);
 
     const checkout = await request(server)
@@ -128,6 +128,7 @@ describe('admin orders', () => {
 
       expect(detail.body.lines.length).toBeGreaterThanOrEqual(1);
       expect(detail.body.lines[0].qtyFulfilled).toBe(0);
+      expect(detail.body.fulfillments).toEqual([]);
       expect(detail.body.shippingAddress.line1).toBe('1 Demo St');
 
       const fulfilled = await request(server)
@@ -141,6 +142,8 @@ describe('admin orders', () => {
       expect(fulfilled.body.lines[0].qtyFulfilled).toBe(
         fulfilled.body.lines[0].qtyOrdered,
       );
+      expect(fulfilled.body.fulfillments.length).toBe(1);
+      expect(fulfilled.body.fulfillments[0].status).toBe('pending');
 
       await request(server)
         .patch(`/v1/admin/orders/${orderId}/status`)
@@ -176,6 +179,7 @@ describe('admin orders', () => {
     expect(shipped.body.lines[0].qtyFulfilled).toBe(
       shipped.body.lines[0].qtyOrdered,
     );
+    expect(shipped.body.fulfillments[0].status).toBe('shipped');
 
     const cancelled = await request(server)
       .patch(`/v1/admin/orders/${cancelId}/status`)
@@ -186,4 +190,90 @@ describe('admin orders', () => {
     expect(cancelled.body.status).toBe('cancelled');
     expect(cancelled.body.lines[0].qtyFulfilled).toBe(0);
   });
+
+  it.skipIf(!hasDb)(
+    'partial and split fulfillments with per-shipment tracking',
+    async () => {
+      expect(staffToken).toBeTruthy();
+      const orderId = await placeGuestOrder(
+        `split-${Date.now().toString(36)}@example.com`,
+        3,
+      );
+
+      const detail = await request(server)
+        .get(`/v1/admin/orders/${orderId}`)
+        .set('Host', DEMO_HOST)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .expect(200);
+
+      const lineId = detail.body.lines[0].id as string;
+      expect(detail.body.lines[0].qtyOrdered).toBe(3);
+
+      const first = await request(server)
+        .post(`/v1/admin/orders/${orderId}/fulfillments`)
+        .set('Host', DEMO_HOST)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          lines: [{ orderLineId: lineId, qty: 1 }],
+          carrier: 'TCS',
+          trackingNumber: 'TCS-AAA-001',
+          markShipped: true,
+        })
+        .expect(201);
+
+      expect(first.body.status).toBe('partially_fulfilled');
+      expect(first.body.lines[0].qtyFulfilled).toBe(1);
+      expect(first.body.fulfillments).toHaveLength(1);
+      expect(first.body.fulfillments[0].trackingNumber).toBe('TCS-AAA-001');
+      expect(first.body.fulfillments[0].carrier).toBe('TCS');
+      expect(first.body.fulfillments[0].status).toBe('shipped');
+      expect(first.body.fulfillments[0].lines[0].qty).toBe(1);
+
+      await request(server)
+        .post(`/v1/admin/orders/${orderId}/fulfillments`)
+        .set('Host', DEMO_HOST)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          lines: [{ orderLineId: lineId, qty: 5 }],
+        })
+        .expect(400);
+
+      const second = await request(server)
+        .post(`/v1/admin/orders/${orderId}/fulfillments`)
+        .set('Host', DEMO_HOST)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          lines: [{ orderLineId: lineId, qty: 2 }],
+          markShipped: false,
+        })
+        .expect(201);
+
+      expect(second.body.status).toBe('fulfilled');
+      expect(second.body.lines[0].qtyFulfilled).toBe(3);
+      expect(second.body.fulfillments).toHaveLength(2);
+
+      const pendingId = second.body.fulfillments.find(
+        (f: { status: string }) => f.status === 'pending',
+      ).id as string;
+
+      const tracked = await request(server)
+        .patch(`/v1/admin/orders/${orderId}/fulfillments/${pendingId}`)
+        .set('Host', DEMO_HOST)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
+          carrier: 'Leopard',
+          trackingNumber: 'LEO-BBB-002',
+          status: 'shipped',
+        })
+        .expect(200);
+
+      const updated = tracked.body.fulfillments.find(
+        (f: { id: string }) => f.id === pendingId,
+      );
+      expect(updated.status).toBe('shipped');
+      expect(updated.trackingNumber).toBe('LEO-BBB-002');
+      expect(updated.carrier).toBe('Leopard');
+      expect(updated.shippedAt).toBeTruthy();
+    },
+  );
 });

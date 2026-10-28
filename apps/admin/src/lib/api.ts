@@ -7,6 +7,7 @@ import {
   type AdminOrderSummary,
   type AuthResult,
   type AuthUser,
+  type CreateAdminFulfillmentInput,
   type PaymentSettingsUpdate,
   type Product,
   type ProductCreateInput,
@@ -15,6 +16,7 @@ import {
   type ShippingMethodCreate,
   type ShippingMethodUpdate,
   type TenantPaymentSettings,
+  type UpdateAdminFulfillmentInput,
 } from '@ecom/sdk-api';
 import {
   clearStaffBearer,
@@ -117,6 +119,21 @@ export async function updateAdminShippingMethod(
   body: ShippingMethodUpdate,
 ): Promise<ShippingMethod> {
   return client().updateAdminShippingMethod(id, body);
+}
+
+export async function createAdminFulfillment(
+  orderId: string,
+  body: CreateAdminFulfillmentInput,
+): Promise<AdminOrderDetail> {
+  return client().createAdminFulfillment(orderId, body);
+}
+
+export async function updateAdminFulfillment(
+  orderId: string,
+  fulfillmentId: string,
+  body: UpdateAdminFulfillmentInput,
+): Promise<AdminOrderDetail> {
+  return client().updateAdminFulfillment(orderId, fulfillmentId, body);
 }
 
 export async function getAdminPaymentSettings(): Promise<TenantPaymentSettings> {

@@ -20,6 +20,13 @@ export const sampleTemplates: EmailTemplate[] = [
     subject: 'Your order is confirmed',
     bodyText: 'Thanks for your order. We will email when it ships.',
   },
+  {
+    id: 'fulfillment_shipped',
+    locale: 'en',
+    subject: 'A shipment from your order is on the way',
+    bodyText:
+      'Part of your order has shipped. Tracking details are included when available.',
+  },
 ];
 
 export function getTemplate(
