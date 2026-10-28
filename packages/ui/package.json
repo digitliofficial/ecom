@@ -2,12 +2,12 @@
   "name": "@ecom/ui",
   "version": "0.0.0",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.tsx",
+      "default": "./src/index.tsx"
     }
   },
   "scripts": {
