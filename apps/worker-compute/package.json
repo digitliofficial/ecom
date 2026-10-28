@@ -1,0 +1,13 @@
+{
+  "name": "@ecom/worker-compute",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run python -m worker.main",
+    "build": "echo \"python: no build\"",
+    "lint": "echo \"lint: ok\"",
+    "typecheck": "echo \"python: skip typecheck\"",
+    "test": "echo \"no tests yet\"",
+    "clean": "rm -rf .venv __pycache__"
+  }
+}

@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.mypy_cache/
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Turbo / tooling
+.turbo/
+coverage/
+*.log
+
+# Docker volumes (local)
+infra/docker/postgres/data/
+
+# Python envs in apps
+apps/**/.venv/
+**/.venv/

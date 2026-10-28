@@ -1,0 +1,13 @@
+{
+  "name": "@ecom/compute",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "echo \"python: no build\"",
+    "lint": "uv run ruff check app tests || true",
+    "typecheck": "echo \"python: skip typecheck\"",
+    "test": "uv run pytest",
+    "clean": "rm -rf .venv __pycache__ .pytest_cache .ruff_cache"
+  }
+}
