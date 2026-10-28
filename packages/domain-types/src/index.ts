@@ -273,3 +273,40 @@ export type ProductVariant = {
   currency: string;
   inventoryQuantity?: number;
 };
+
+export type MigrationSource = 'shopify_api' | 'csv' | 'fixture';
+
+export type MigrationEntityType =
+  | 'products'
+  | 'customers'
+  | 'orders'
+  | 'redirects';
+
+export type MigrationJobStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export type MigrationJob = {
+  id: string;
+  tenantId: string;
+  source: MigrationSource;
+  entityTypes: MigrationEntityType[];
+  status: MigrationJobStatus;
+  shopDomain?: string | null;
+  stats?: Record<string, unknown>;
+  error?: string | null;
+  createdAt?: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+};
+
+export type UrlRedirect = {
+  id: string;
+  tenantId: string;
+  fromPath: string;
+  toPath: string;
+  statusCode: number;
+};

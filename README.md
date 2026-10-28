@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy + CMS + lifecycle email** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping + **notification** settings (console EmailProvider MVP; optional Resend; abandoned-cart reminders) + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR** + **CMS** (menus, SEO, theme packs, policy pages), platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest + privacy + CMS + lifecycle email + Shopify import MVP** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping + **notification** settings (console EmailProvider MVP; optional Resend; abandoned-cart reminders) + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub + **cookie consent** / **GDPR DSAR** + **CMS** (menus, SEO, theme packs, policy pages), **platform migration jobs** (Shopify Admin API / CSV / fixtures → products, customers, archive orders, redirects), platform-admin ops, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -456,6 +456,47 @@ curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
 
 **Optional Resend:** set `RESEND_API_KEY` (and optionally `EMAIL_PROVIDER=resend`, `EMAIL_FROM=…`) in `.env`. With a key present, Nest uses the Resend adapter instead of console.
 
+### Shopify → platform import (2 anchor clients)
+
+Idempotent `migration_jobs` + `migration_records` + `url_redirects` (see `16-migration.sql`). Nest orchestrates; platform-admin UI and CLI share `X-Platform-Key` (`PLATFORM_API_KEY`). Historical orders land as `source=shopify_import` (not re-chargeable). Customer passwords are **not** imported (`must_reset_password`).
+
+```bash
+pnpm db:apply                       # 16-migration.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/platform-admin dev  # :3003
+# optional queue consumer:
+# pnpm --filter @ecom/worker-migrate dev
+```
+
+1. Open http://localhost:3003 — create a fixture/API/CSV job for tenant `demo` (or a merchant slug) and run it.
+2. Or CLI:
+
+```bash
+# Fixture file (offline / CI)
+pnpm migrate:shopify -- --tenant demo --source fixture --fixture ./path/to/fixture.json \
+  --entities products,customers,orders,redirects --run
+
+# Live Shopify Admin API (custom app token)
+pnpm migrate:shopify -- --tenant demo --shop mystore.myshopify.com --token shpat_xxx \
+  --entities products,customers,orders,redirects --run
+
+# CSV fallback when API throttles
+pnpm migrate:shopify -- --tenant demo --csv-products ./products.csv --entities products --run
+```
+
+Platform API:
+
+```bash
+curl -sS -X POST -H "X-Platform-Key: $PLATFORM_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"tenantId":"demo","source":"fixture","entityTypes":["products"],"fixture":{"products":[{"id":1,"title":"Mug","handle":"mug","variants":[{"id":11,"sku":"MUG-1","price":"9.99"}]}]}}' \
+  http://localhost:3001/v1/platform/migration/jobs
+
+curl -sS -X POST -H "X-Platform-Key: $PLATFORM_API_KEY" \
+  http://localhost:3001/v1/platform/migration/jobs/<JOB_ID>/run
+```
+
+Worker queue (optional): `LPUSH migration:jobs <jobId>` → `worker-migrate` POSTs `/run`.
+
 ## Workspace layout
 
 See architecture docs in the Digitli Project Hub Context — apps under `apps/`, shared TS under `packages/`, Docker under `infra/docker/`.
@@ -464,6 +505,7 @@ See architecture docs in the Digitli Project Hub Context — apps under `apps/`,
 
 - `pnpm build` / `lint` / `test` / `typecheck` — Turborepo pipelines
 - `pnpm db:apply` — re-apply idempotent Postgres init SQL (Node; Windows-safe)
+- `pnpm migrate:shopify` — create/run Shopify import jobs (platform API key)
 - Python compute: `cd apps/compute && uv sync && uv run pytest`
 
 ## Docs

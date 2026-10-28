@@ -15,6 +15,7 @@ import { LocalizationModule } from './localization/localization.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { CmsModule } from './cms/cms.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { MigrationModule } from './migration/migration.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     PrivacyModule,
     CmsModule,
     NotificationsModule,
+    MigrationModule,
   ],
 })
 export class AppModule {}
