@@ -1351,8 +1351,6 @@ export class ApiClient {
     );
   }
 
-}
-
   getWishlist(): Promise<Wishlist> {
     return this.get<Wishlist>('/v1/wishlist');
   }

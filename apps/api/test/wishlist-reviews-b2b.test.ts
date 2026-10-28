@@ -60,6 +60,14 @@ describe('wishlist + reviews + B2B', () => {
         .send({ email: 'owner@demo.localhost', password: 'DemoOwner123!' });
       staffToken = staff.body.token as string;
 
+      // B2B is Growth+ (feature_b2b); leave Starter for other suites after we finish.
+      await request(server)
+        .post('/v1/admin/billing/change-plan')
+        .set('Host', DEMO_HOST)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ planCode: 'growth' })
+        .expect(201);
+
       const customer = await request(server)
         .post('/v1/auth/customer/login')
         .set('Host', DEMO_HOST)
@@ -72,6 +80,13 @@ describe('wishlist + reviews + B2B', () => {
   });
 
   afterAll(async () => {
+    if (hasDb && staffToken) {
+      await request(server)
+        .post('/v1/admin/billing/change-plan')
+        .set('Host', DEMO_HOST)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ planCode: 'starter' });
+    }
     await app.close();
   });
 

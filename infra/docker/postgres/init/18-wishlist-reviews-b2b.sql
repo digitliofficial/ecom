@@ -1,18 +1,7 @@
 -- Wishlist, product reviews (moderation), B2B customer groups + price lists
--- Runs after 17-plans-metering.sql (uses Growth plan + feature_b2b entitlement).
-
--- ---------------------------------------------------------------------------
--- Demo tenant on Growth so local B2B wholesale seed is entitled (feature_b2b=1)
--- ---------------------------------------------------------------------------
-UPDATE tenants
-SET plan_id = '10000000-0000-4000-8000-000000000002'
-WHERE id = '00000000-0000-4000-8000-000000000001';
-
-UPDATE tenant_subscriptions
-SET plan_id = '10000000-0000-4000-8000-000000000002',
-    status = 'active',
-    updated_at = now()
-WHERE tenant_id = '00000000-0000-4000-8000-000000000001';
+-- Runs after 17-plans-metering.sql (B2B gated by plan entitlement feature_b2b).
+-- Demo tenant stays on Starter by default; switch to Growth (Plans admin / billing
+-- changePlan) to entitle wholesale list prices for the seeded group.
 
 -- ---------------------------------------------------------------------------
 -- Customers: account type for B2B buyers

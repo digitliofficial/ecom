@@ -546,7 +546,7 @@ pnpm --filter @ecom/storefront dev  # :3005 → /en
 
 **Reviews** — customers submit on product pages (`/en/products/:slug`); status starts `pending`. Admin **Reviews** queue approves/rejects. Storefront lists approved only; product `rating_avg` / `rating_count` recompute on moderate. `verified_purchase` when the customer has a placed/fulfilled/shipped order containing the product.
 
-**B2B** — plan entitlements `b2b_customer_groups` / `b2b_price_lists` (enabled on starter for local demo + Growth plan seed). Admin **B2B** manages price lists and customer groups. Demo seed: Wholesale group + list prices Demo Mug at **2000** (retail 2500) for `customer@demo.localhost`. Catalog and cart resolve list price when the customer JWT is present and the cart is linked to that customer.
+**B2B** — gated by plan entitlement `feature_b2b` (Growth / Advanced). Switch the demo tenant to **Growth** under Admin → Plans, then open Admin **B2B** for price lists and customer groups. Demo seed: Wholesale group + list prices Demo Mug at **2000** (retail 2500) for `customer@demo.localhost`. Catalog and cart resolve list price when the customer JWT is present and the cart is linked to that customer.
 
 ```bash
 CUST=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
