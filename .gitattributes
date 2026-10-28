@@ -1,0 +1,5 @@
+# Keep shell scripts LF so bash on Windows (Git Bash / WSL) does not break on CRLF
+# (e.g. `set: pipefail` / "invalid option name").
+*.sh text eol=lf
+*.mjs text eol=lf
+*.bash text eol=lf
