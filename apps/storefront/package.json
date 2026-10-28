@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev --port 3005",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "next start --port 3005",
     "lint": "echo \"lint: ok\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "echo \"no tests yet\"",

@@ -34,7 +34,7 @@ pnpm dev
 
 | Service | URL |
 |---|---|
-| Storefront | http://localhost:3000 |
+| Storefront | http://localhost:3005 |
 | Admin | http://localhost:3002 |
 | Platform admin | http://localhost:3003 |
 | Nest API | http://localhost:3001/health |
@@ -46,12 +46,16 @@ Demo tenant: slug `demo`, hosts `demo.localhost` / `localhost`. Isolation fixtur
 
 App DB user for RLS: `ecom_app` / `ecom` (see `.env.example`). Owner `ecom` bypasses RLS as superuser in Compose.
 
+### Auth / passwords
+
+**No app-level demo users or passwords** for storefront, merchant admin, or platform admin yet. Storefront is guest checkout (no login). Admin login is a UI stub (`Continue (stub)`). Platform admin is a placeholder shell. API `AuthService` accepts any non-empty Bearer token as a Phase 0 stub (returns `stub-user` / `staff`) — not real JWT verification. Seeds create tenants/catalog only, not staff accounts. Local Postgres passwords above are the only credentials.
+
 ### Guest checkout smoke
 
 ```bash
 pnpm --filter @ecom/api dev          # :3001
 # optional: cd apps/compute && uv run uvicorn app.main:app --port 8000
-pnpm --filter @ecom/storefront dev   # :3000 → /en
+pnpm --filter @ecom/storefront dev   # :3005 → /en
 ```
 
 Flow: home → Add to cart → cart → checkout (email + address) → order `placed` / `not_charged` (NoopAdapter).
