@@ -6,20 +6,24 @@ import {
 } from '@nestjs/common';
 import { TenancyService } from './tenancy.service';
 
+export type TenantRequest = {
+  headers: Record<string, string | string[] | undefined>;
+  tenantId?: string;
+  cookies?: Record<string, string>;
+};
+
 @Injectable()
 export class TenantGuard implements CanActivate {
   constructor(private readonly tenancy: TenancyService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest<{
-      headers: Record<string, string | undefined>;
-      tenantId?: string;
-    }>();
-    const host =
+    const req = context.switchToHttp().getRequest<TenantRequest>();
+    const rawHost =
       req.headers['x-forwarded-host'] ??
       req.headers['x-tenant-host'] ??
       req.headers.host;
-    const tenantId = this.tenancy.resolveTenantIdFromHost(host);
+    const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
+    const tenantId = await this.tenancy.resolveTenantIdFromHost(host);
     if (!tenantId) {
       throw new UnauthorizedException('Unknown tenant host');
     }

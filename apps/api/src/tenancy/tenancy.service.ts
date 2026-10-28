@@ -1,35 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import type { Tenant } from '@ecom/domain-types';
+import { DatabaseService } from '../db/database.service';
 
-/** Phase 0: in-memory demo tenant resolution (Postgres RLS wired later) */
+const DEMO_ID = '00000000-0000-4000-8000-000000000001';
+
 @Injectable()
 export class TenancyService {
-  private readonly demo: Tenant = {
-    id: '00000000-0000-4000-8000-000000000001',
-    slug: 'demo',
-    status: 'active',
-    planId: null,
-    dataRegion: 'us',
-  };
+  constructor(private readonly db: DatabaseService) {}
 
-  private readonly hosts = new Map<string, string>([
-    ['demo.localhost', this.demo.id],
-    ['localhost', this.demo.id],
-  ]);
-
-  resolveTenantIdFromHost(host?: string): string | null {
+  async resolveTenantIdFromHost(host?: string): Promise<string | null> {
     if (!host) return null;
-    const normalized = host.split(':')[0]?.toLowerCase() ?? '';
-    return this.hosts.get(normalized) ?? null;
+    return this.db.resolveTenantIdByHost(host);
   }
 
   getDemoTenant(): Tenant {
-    return this.demo;
+    return {
+      id: DEMO_ID,
+      slug: 'demo',
+      status: 'active',
+      planId: '10000000-0000-4000-8000-000000000001',
+      dataRegion: 'us',
+    };
   }
 
-  /** Placeholder for SET LOCAL app.tenant_id on each request */
+  /** Prefer DatabaseService.withTenant — kept for guard compatibility. */
   async setRlsTenantId(tenantId: string): Promise<void> {
-    // Prisma/TypeORM: SET LOCAL app.tenant_id = $tenantId
     void tenantId;
   }
 }
