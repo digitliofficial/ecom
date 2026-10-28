@@ -125,6 +125,31 @@ export type PaymentSettingsUpdate = {
   stripeEnabled?: boolean;
 };
 
+export type TenantNotificationSettings = {
+  orderPlacedCustomer: boolean;
+  orderPlacedMerchant: boolean;
+  orderShippedCustomer: boolean;
+  orderCancelledCustomer: boolean;
+  abandonedCartEnabled: boolean;
+  abandonedCartIdleMinutes: number;
+  merchantAlertEmail: string | null;
+  updatedAt?: string;
+};
+
+export type NotificationSettingsUpdate = {
+  orderPlacedCustomer?: boolean;
+  orderPlacedMerchant?: boolean;
+  orderShippedCustomer?: boolean;
+  orderCancelledCustomer?: boolean;
+  abandonedCartEnabled?: boolean;
+  abandonedCartIdleMinutes?: number;
+  merchantAlertEmail?: string | null;
+};
+
+export type NotificationProcessResult = {
+  abandonedQueued: number;
+  emailsSent: number;
+};
 
 export type PolicyKind =
   | 'privacy'
@@ -747,6 +772,32 @@ export class ApiClient {
       '/v1/admin/payments/settings',
       body,
     );
+  }
+
+  getAdminNotificationSettings(): Promise<TenantNotificationSettings> {
+    return this.get<TenantNotificationSettings>(
+      '/v1/admin/notifications/settings',
+    );
+  }
+
+  updateAdminNotificationSettings(
+    body: NotificationSettingsUpdate,
+  ): Promise<TenantNotificationSettings> {
+    return this.patch<TenantNotificationSettings>(
+      '/v1/admin/notifications/settings',
+      body,
+    );
+  }
+
+  processAdminNotifications(): Promise<NotificationProcessResult> {
+    return this.post<NotificationProcessResult>(
+      '/v1/admin/notifications/process',
+      {},
+    );
+  }
+
+  setCartEmail(cartId: string, body: { email: string }): Promise<Cart> {
+    return this.patch<Cart>(`/v1/carts/${cartId}/email`, body);
   }
 
   getStorefrontLocalization(): Promise<StorefrontLocalization> {

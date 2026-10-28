@@ -6,6 +6,7 @@ import {
 import type { PoolClient } from 'pg';
 import { DatabaseService } from '../db/database.service';
 import { createGuestToken } from '../common/guest-token';
+import { AbandonedCartService } from '../notifications/abandoned-cart.service';
 
 export type CartLineDto = {
   id: string;
@@ -30,7 +31,10 @@ export type CartDto = {
 
 @Injectable()
 export class CartService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly abandonedCart: AbandonedCartService,
+  ) {}
 
   async createGuestCart(
     tenantId: string,
@@ -177,6 +181,7 @@ export class CartService {
       await client.query(`UPDATE carts SET updated_at = now() WHERE id = $1`, [
         cartId,
       ]);
+      await this.abandonedCart.cancelPendingRuns(tenantId, cartId, client);
       return this.mapCart(client, cart);
     });
   }
@@ -202,6 +207,7 @@ export class CartService {
       await client.query(`UPDATE carts SET updated_at = now() WHERE id = $1`, [
         cartId,
       ]);
+      await this.abandonedCart.cancelPendingRuns(tenantId, cartId, client);
       return this.mapCart(client, cart);
     });
   }
@@ -221,6 +227,7 @@ export class CartService {
       await client.query(`UPDATE carts SET updated_at = now() WHERE id = $1`, [
         cartId,
       ]);
+      await this.abandonedCart.cancelPendingRuns(tenantId, cartId, client);
       return this.mapCart(client, cart);
     });
   }
@@ -229,13 +236,18 @@ export class CartService {
     tenantId: string,
     cartId: string,
     email: string,
-  ): Promise<void> {
-    await this.db.withTenant(tenantId, async (client) => {
-      await this.requireCart(client, cartId);
+  ): Promise<CartDto> {
+    if (!email?.includes('@')) {
+      throw new BadRequestException('Valid email is required');
+    }
+    return this.db.withTenant(tenantId, async (client) => {
+      const cart = await this.requireCart(client, cartId);
       await client.query(
         `UPDATE carts SET email = $1, updated_at = now() WHERE id = $2`,
-        [email, cartId],
+        [email.trim(), cartId],
       );
+      await this.abandonedCart.cancelPendingRuns(tenantId, cartId, client);
+      return this.mapCart(client, cart);
     });
   }
 

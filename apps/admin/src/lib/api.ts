@@ -16,6 +16,7 @@ import {
   type DsarRequestDetail,
   type DsarRequestSummary,
   type LocalizationSettingsUpdate,
+  type NotificationSettingsUpdate,
   type PaymentSettingsUpdate,
   type PrivacySettingsUpdate,
   type Product,
@@ -31,6 +32,7 @@ import {
   type PolicyUpdateInput,
   type SeoSettings,
   type SeoSettingsUpdate,
+  type TenantNotificationSettings,
   type TenantPaymentSettings,
   type TenantPrivacySettings,
   type ThemeSettings,
@@ -164,6 +166,23 @@ export async function updateAdminPaymentSettings(
   body: PaymentSettingsUpdate,
 ): Promise<TenantPaymentSettings> {
   return client().updateAdminPaymentSettings(body);
+}
+
+export async function getAdminNotificationSettings(): Promise<TenantNotificationSettings> {
+  return client().getAdminNotificationSettings();
+}
+
+export async function updateAdminNotificationSettings(
+  body: NotificationSettingsUpdate,
+): Promise<TenantNotificationSettings> {
+  return client().updateAdminNotificationSettings(body);
+}
+
+export async function processAdminNotifications(): Promise<{
+  abandonedQueued: number;
+  emailsSent: number;
+}> {
+  return client().processAdminNotifications();
 }
 
 export async function getAdminDomains(): Promise<DomainsConfig> {

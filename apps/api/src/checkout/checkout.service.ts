@@ -15,6 +15,8 @@ import {
   createGuestToken,
   hashAccessToken,
 } from '../common/guest-token';
+import { AbandonedCartService } from '../notifications/abandoned-cart.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   PaymentsService,
   type BankDetails,
@@ -77,6 +79,8 @@ export class CheckoutService {
     private readonly compute: ComputeClientService,
     private readonly paymentsConfig: PaymentsService,
     private readonly shipping: ShippingService,
+    private readonly notifications: NotificationsService,
+    private readonly abandonedCart: AbandonedCartService,
   ) {}
 
   async createSession(
@@ -236,6 +240,19 @@ export class CheckoutService {
       }
 
       await this.carts.markConverted(client, cart.id);
+      await this.abandonedCart.cancelPendingRuns(tenantId, cart.id, client);
+
+      await this.notifications.notifyOrderPlaced({
+        tenantId,
+        orderId,
+        customerEmail: input.email,
+        paymentMethod,
+        paymentStatus,
+        totalAmountMinor: total,
+        currency,
+        locale: cart.locale ?? 'en',
+        client,
+      });
 
       return {
         id: sessionId,
@@ -275,6 +292,14 @@ export class CheckoutService {
         bankTransferInstructions:
           paymentMethod === 'bank_transfer' ? bankDetails : null,
       };
+    }).then(async (result) => {
+      // Drain outbox so console/Resend shows mail promptly after checkout
+      try {
+        await this.notifications.processOutbox();
+      } catch {
+        /* worker will retry */
+      }
+      return result;
     });
   }
 }

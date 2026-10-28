@@ -57,6 +57,12 @@ importers:
       '@ecom/domain-types':
         specifier: workspace:*
         version: link:../../packages/domain-types
+      '@ecom/email-providers':
+        specifier: workspace:*
+        version: link:../../packages/email-providers
+      '@ecom/email-templates':
+        specifier: workspace:*
+        version: link:../../packages/email-templates
       '@ecom/money':
         specifier: workspace:*
         version: link:../../packages/money
@@ -293,6 +299,15 @@ importers:
 
   packages/domain-types:
     devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/email-providers:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.5
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
