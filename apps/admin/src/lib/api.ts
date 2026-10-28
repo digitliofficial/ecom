@@ -5,9 +5,11 @@ import {
   type AdminOrderDetail,
   type AdminOrderStatusUpdate,
   type AdminOrderSummary,
+  type AnalyticsSummary,
   type AuthResult,
   type AuthUser,
   type CreateAdminFulfillmentInput,
+  type DomainsConfig,
   type PaymentSettingsUpdate,
   type Product,
   type ProductCreateInput,
@@ -15,6 +17,7 @@ import {
   type ShippingMethod,
   type ShippingMethodCreate,
   type ShippingMethodUpdate,
+  type TenantDomain,
   type TenantPaymentSettings,
   type UpdateAdminFulfillmentInput,
 } from '@ecom/sdk-api';
@@ -144,6 +147,29 @@ export async function updateAdminPaymentSettings(
   body: PaymentSettingsUpdate,
 ): Promise<TenantPaymentSettings> {
   return client().updateAdminPaymentSettings(body);
+}
+
+export async function getAdminDomains(): Promise<DomainsConfig> {
+  return client().getAdminDomains();
+}
+
+export async function addAdminDomain(body: {
+  host: string;
+  isPrimary?: boolean;
+}): Promise<TenantDomain> {
+  return client().addAdminDomain(body);
+}
+
+export async function verifyAdminDomain(id: string): Promise<TenantDomain> {
+  return client().verifyAdminDomain(id);
+}
+
+export async function removeAdminDomain(id: string): Promise<void> {
+  return client().removeAdminDomain(id);
+}
+
+export async function getAdminAnalyticsSummary(): Promise<AnalyticsSummary> {
+  return client().getAdminAnalyticsSummary();
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {

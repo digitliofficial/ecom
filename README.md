@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP + partial fulfillments + custom domains + analytics ingest** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + **split shipments** (line qty + tracking) + payment + shipping settings + **Domains** (CNAME instructions + table) + **Analytics** dashboard stub, platform-admin ops stub, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -71,7 +71,7 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — …/payments/shipping/fulfillments applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — …/shipping/fulfillments/domains+analytics applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
@@ -276,6 +276,41 @@ curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
 ```
 
 Fulfillments: multiple per order; each has lines (`orderLineId` + `qty`), optional `carrier` / `trackingNumber`, status `pending`|`shipped`|`delivered`|`cancelled`. Order status rolls up to `partially_fulfilled` / `fulfilled`. Status shortcuts from `placed`/`pending`/`partially_fulfilled`: `fulfilled` (remaining), `shipped` (remaining + order-level shipped), `cancelled`.
+
+### Custom domains + analytics (local)
+
+```bash
+pnpm db:apply                       # 11-domains-analytics.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/platform-admin dev  # :3003 (ops stub)
+```
+
+1. Open http://localhost:3002/login — `owner@demo.localhost` / `DemoOwner123!`.
+2. Go to **Domains** — read CNAME host/target (`PLATFORM_CNAME_TARGET`, default `edge.ecom.digitli.local`), add a custom hostname, **Verify** (DNS lookup stubbed), remove when done. Seed hosts (`demo.localhost`, `localhost`) stay locked.
+3. Go to **Analytics** — dashboard stub shows totals + recent events after ingest.
+4. Platform ops stub: http://localhost:3003
+
+```bash
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+# Domain table + CNAME instructions
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/domains
+
+# Ingest a first-party event (storefront / beacon)
+curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"eventName":"page_view","path":"/en","sessionId":"sess-1"}' \
+  http://localhost:3001/v1/analytics/events
+
+# Admin summary stub
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/analytics/summary
+```
+
+Allowed ingest `eventName` values: `page_view`, `product_view`, `add_to_cart`, `begin_checkout`, `purchase`, `custom`.
 
 ## Workspace layout
 
