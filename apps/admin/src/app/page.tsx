@@ -16,8 +16,8 @@ export default async function AdminHome() {
     <AdminShell email={email}>
       <p style={{ marginTop: '1.5rem', maxWidth: 560 }}>
         Signed in as demo tenant staff. Manage catalog, orders (split
-        fulfillments), offline payments, shipping methods, custom domains, and
-        the analytics ingest stub; Localization remains a settings shell.
+        fulfillments), offline payments, shipping methods, custom domains,
+        analytics ingest, and localization (multi-language / multi-currency).
       </p>
       <ul style={{ marginTop: '1.25rem', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
         <li>
@@ -39,7 +39,8 @@ export default async function AdminHome() {
           <Link href="/analytics">Analytics</Link> — event totals dashboard stub
         </li>
         <li>
-          <Link href="/localization">Localization</Link> — locale &amp; currency shell
+          <Link href="/localization">Localization</Link> — multi-language &amp;
+          multi-currency
         </li>
       </ul>
       <div style={{ marginTop: '2rem', padding: '1rem 0', borderTop: '1px solid #cfc8bc' }}>

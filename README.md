@@ -229,6 +229,40 @@ curl -sS -X POST http://localhost:8000/v1/shipping/rates \
 
 Demo seed methods: Standard (`500`), Express (`1500`), Aggregator stub (`800`, not COD-compatible).
 
+### Localization — multi-language + multi-currency (local)
+
+Merchant admin toggles for defaults, multi-language / multi-currency, and enabled
+locale/currency lists. Storefront shows language and currency switchers when
+multi is on and more than one option is enabled. Charge currency stays the store
+default (MVP); display currency is cookie-backed for browsing.
+
+```bash
+pnpm db:apply                       # 12-localization.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/storefront dev  # :3005 → /en
+```
+
+1. Open http://localhost:3002/login — `owner@demo.localhost` / `DemoOwner123!`.
+2. Go to **Localization** — set defaults; enable multi-language / multi-currency; tick extra locales (e.g. `ur`) and currencies (e.g. `PKR`).
+3. Open http://localhost:3005/en — language and currency switchers appear in the header when &gt;1 option is enabled.
+
+```bash
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/localization/settings
+
+curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"multiLanguage":true,"enabledLocales":["en","ur"],"multiCurrency":true,"enabledCurrencies":["USD","PKR"]}' \
+  http://localhost:3001/v1/admin/localization/settings
+
+curl -sS -H 'Host: demo.localhost' http://localhost:3001/v1/localization
+```
+
 ### Merchant orders admin (local)
 
 ```bash

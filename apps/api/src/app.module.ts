@@ -11,6 +11,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { DomainsModule } from './domains/domains.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { LocalizationModule } from './localization/localization.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     ShippingModule,
     DomainsModule,
     AnalyticsModule,
+    LocalizationModule,
   ],
 })
 export class AppModule {}

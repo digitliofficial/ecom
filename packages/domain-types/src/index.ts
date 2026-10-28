@@ -172,6 +172,31 @@ export type TenantPaymentSettings = {
   stripeEnabled: boolean;
 };
 
+export type TenantLocalizationSettings = {
+  defaultLocale: string;
+  defaultCurrency: string;
+  multiLanguage: boolean;
+  multiCurrency: boolean;
+  enabledLocales: string[];
+  enabledCurrencies: string[];
+  availableLocales: string[];
+  availableCurrencies: string[];
+  maxLocales: number;
+  maxCurrencies: number;
+  fxRounding?: string;
+  fxDisclaimer?: string | null;
+};
+
+export type StorefrontLocalization = {
+  defaultLocale: string;
+  defaultCurrency: string;
+  multiLanguage: boolean;
+  multiCurrency: boolean;
+  locales: string[];
+  currencies: string[];
+  fxDisclaimer?: string | null;
+};
+
 export type ProductStatus = 'active' | 'draft' | 'archived';
 
 export type Product = {

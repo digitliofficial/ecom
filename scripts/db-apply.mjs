@@ -178,7 +178,7 @@ function main() {
   }
 
   console.log(
-    "OK — schema/seed/RLS/host resolve/catalog admin/auth/payments/shipping/fulfillments/domains+analytics applied.",
+    "OK — schema/seed/RLS/host resolve/catalog admin/auth/payments/shipping/fulfillments/domains+analytics/localization applied.",
   );
   console.log(
     "Smoke: curl -sS -H 'x-tenant-host: demo.localhost' http://localhost:3001/v1/catalog/products",

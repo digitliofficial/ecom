@@ -7,7 +7,8 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO plan_entitlements (plan_id, key, value)
 VALUES
   ('10000000-0000-4000-8000-000000000001', 'max_products', '100'),
-  ('10000000-0000-4000-8000-000000000001', 'max_locales', '1')
+  ('10000000-0000-4000-8000-000000000001', 'max_locales', '5'),
+  ('10000000-0000-4000-8000-000000000001', 'max_currencies', '5')
 ON CONFLICT (plan_id, key) DO NOTHING;
 
 INSERT INTO tenants (id, slug, status, plan_id, data_region)

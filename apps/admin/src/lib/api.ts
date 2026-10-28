@@ -10,6 +10,7 @@ import {
   type AuthUser,
   type CreateAdminFulfillmentInput,
   type DomainsConfig,
+  type LocalizationSettingsUpdate,
   type PaymentSettingsUpdate,
   type Product,
   type ProductCreateInput,
@@ -18,6 +19,7 @@ import {
   type ShippingMethodCreate,
   type ShippingMethodUpdate,
   type TenantDomain,
+  type TenantLocalizationSettings,
   type TenantPaymentSettings,
   type UpdateAdminFulfillmentInput,
 } from '@ecom/sdk-api';
@@ -170,6 +172,16 @@ export async function removeAdminDomain(id: string): Promise<void> {
 
 export async function getAdminAnalyticsSummary(): Promise<AnalyticsSummary> {
   return client().getAdminAnalyticsSummary();
+}
+
+export async function getAdminLocalizationSettings(): Promise<TenantLocalizationSettings> {
+  return client().getAdminLocalizationSettings();
+}
+
+export async function updateAdminLocalizationSettings(
+  body: LocalizationSettingsUpdate,
+): Promise<TenantLocalizationSettings> {
+  return client().updateAdminLocalizationSettings(body);
 }
 
 export function formatMoney(amountMinor: number, currency: string): string {

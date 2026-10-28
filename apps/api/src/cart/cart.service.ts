@@ -34,9 +34,17 @@ export class CartService {
 
   async createGuestCart(
     tenantId: string,
-    opts?: { locale?: string; currency?: string },
+    opts?: {
+      locale?: string;
+      chargeCurrency?: string;
+      displayCurrency?: string;
+      /** @deprecated use chargeCurrency / displayCurrency */
+      currency?: string;
+    },
   ): Promise<CartDto> {
     const guestToken = createGuestToken();
+    const charge = opts?.chargeCurrency ?? opts?.currency ?? 'USD';
+    const display = opts?.displayCurrency ?? charge;
     return this.db.withTenant(tenantId, async (client) => {
       const cart = await client.query<{
         id: string;
@@ -49,13 +57,14 @@ export class CartService {
         charge_currency: string | null;
       }>(
         `INSERT INTO carts (tenant_id, status, guest_token, locale, charge_currency, display_currency)
-         VALUES ($1, 'active', $2, $3, $4, $4)
+         VALUES ($1, 'active', $2, $3, $4, $5)
          RETURNING id, tenant_id, status, guest_token, customer_id, email, locale, charge_currency`,
         [
           tenantId,
           guestToken,
           opts?.locale ?? 'en',
-          opts?.currency ?? 'USD',
+          charge,
+          display,
         ],
       );
       const row = cart.rows[0]!;

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { AdminShell } from '../../components/AdminShell';
+import { LocalizationSettingsForm } from '../../components/LocalizationSettingsForm';
 import {
   STAFF_SESSION_COOKIE,
   readStaffEmailFromCookie,
@@ -19,13 +20,12 @@ export default async function LocalizationPage() {
           <Link href="/">← Dashboard</Link>
         </p>
         <h2 style={{ marginTop: '1rem' }}>Localization</h2>
-        <p>Settings shell — default locale/currency, multi-lang / multi-currency toggles (Phase 1).</p>
-        <ul>
-          <li>Default locale: en</li>
-          <li>Default currency: USD (charge)</li>
-          <li>Multi-language: off</li>
-          <li>Multi-currency (display): off</li>
-        </ul>
+        <p style={{ opacity: 0.8, maxWidth: 520 }}>
+          Set the store default locale and charge currency. Turn on multi-language
+          or multi-currency to enable additional options; the storefront shows
+          switchers when more than one is enabled.
+        </p>
+        <LocalizationSettingsForm />
       </div>
     </AdminShell>
   );
