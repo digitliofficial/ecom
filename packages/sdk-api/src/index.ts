@@ -125,6 +125,34 @@ export type PaymentSettingsUpdate = {
   stripeEnabled?: boolean;
 };
 
+export type StorefrontShippingMethod = {
+  id: string;
+  name: string;
+  priceAmountMinor: number;
+  currency: string;
+  codCompatible: boolean;
+  adapter: string;
+};
+
+export type ShippingMethod = StorefrontShippingMethod & {
+  enabled: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ShippingMethodCreate = {
+  name: string;
+  priceAmountMinor: number;
+  currency?: string;
+  codCompatible?: boolean;
+  enabled?: boolean;
+  sortOrder?: number;
+  adapter?: string;
+};
+
+export type ShippingMethodUpdate = Partial<ShippingMethodCreate>;
+
 export type CheckoutSessionResult = {
   id: string;
   cartId: string;
@@ -137,11 +165,20 @@ export type CheckoutSessionResult = {
     normalized: ShippingAddress;
     provider: string;
   };
+  shipping: {
+    methodId: string;
+    methodName: string;
+    amountMinor: number;
+    currency: string;
+    adapter: string;
+  };
   order: {
     id: string;
     status: string;
     paymentStatus: string;
     paymentMethod: OfflinePaymentMethod | string;
+    subtotalAmountMinor: number;
+    shippingAmountMinor: number;
     totalAmountMinor: number;
     currency: string;
     accessToken: string;
@@ -179,7 +216,10 @@ export type AdminOrderSummary = {
   guestEmail: string | null;
   customerId: string | null;
   totalAmountMinor: number;
+  shippingAmountMinor: number;
   chargeCurrency: string;
+  shippingMethodName: string | null;
+  trackingNumber: string | null;
   createdAt: string;
   updatedAt: string;
   lineCount: number;
@@ -189,6 +229,9 @@ export type AdminOrderDetail = AdminOrderSummary & {
   cartId: string | null;
   checkoutSessionId: string | null;
   shippingAddress: ShippingAddress | null;
+  shippingMethodId: string | null;
+  trackingCarrier: string | null;
+  shippedAt: string | null;
   lines: AdminOrderLine[];
 };
 
@@ -347,13 +390,36 @@ export class ApiClient {
     return this.get<StorefrontPaymentMethod[]>('/v1/payments/methods');
   }
 
+  listShippingMethods(paymentMethod?: string): Promise<StorefrontShippingMethod[]> {
+    const q = paymentMethod
+      ? `?paymentMethod=${encodeURIComponent(paymentMethod)}`
+      : '';
+    return this.get<StorefrontShippingMethod[]>(`/v1/shipping/methods${q}`);
+  }
+
   createCheckoutSession(body: {
     cartId?: string;
     email: string;
     shippingAddress: ShippingAddress;
     paymentMethod: OfflinePaymentMethod;
+    shippingMethodId: string;
   }): Promise<CheckoutSessionResult> {
     return this.post<CheckoutSessionResult>('/v1/checkout/sessions', body);
+  }
+
+  listAdminShippingMethods(): Promise<ShippingMethod[]> {
+    return this.get<ShippingMethod[]>('/v1/admin/shipping/methods');
+  }
+
+  createAdminShippingMethod(body: ShippingMethodCreate): Promise<ShippingMethod> {
+    return this.post<ShippingMethod>('/v1/admin/shipping/methods', body);
+  }
+
+  updateAdminShippingMethod(
+    id: string,
+    body: ShippingMethodUpdate,
+  ): Promise<ShippingMethod> {
+    return this.patch<ShippingMethod>(`/v1/admin/shipping/methods/${id}`, body);
   }
 
   getAdminPaymentSettings(): Promise<TenantPaymentSettings> {
@@ -379,7 +445,11 @@ export class ApiClient {
 
   updateAdminOrderStatus(
     id: string,
-    body: { status: AdminOrderStatusUpdate },
+    body: {
+      status: AdminOrderStatusUpdate;
+      trackingNumber?: string | null;
+      trackingCarrier?: string | null;
+    },
   ): Promise<AdminOrderDetail> {
     return this.patch<AdminOrderDetail>(`/v1/admin/orders/${id}/status`, body);
   }

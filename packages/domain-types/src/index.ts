@@ -77,6 +77,18 @@ export type OrderLine = {
 
 export type OfflinePaymentMethod = 'cod' | 'bank_transfer';
 
+export type ShippingMethod = {
+  id: string;
+  tenantId?: string;
+  name: string;
+  priceAmountMinor: number;
+  currency: string;
+  codCompatible: boolean;
+  enabled?: boolean;
+  sortOrder?: number;
+  adapter?: string;
+};
+
 export type Order = {
   id: string;
   tenantId: string;
@@ -88,7 +100,13 @@ export type Order = {
   guestEmail?: string | null;
   customerId?: string | null;
   totalAmountMinor: number;
+  shippingAmountMinor?: number;
   chargeCurrency: string;
+  shippingMethodId?: string | null;
+  shippingMethodName?: string | null;
+  trackingNumber?: string | null;
+  trackingCarrier?: string | null;
+  shippedAt?: string | null;
   shippingAddress?: Record<string, unknown> | null;
   createdAt?: string;
   updatedAt?: string;

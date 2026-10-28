@@ -13,8 +13,14 @@ import type {
   CheckoutSessionResult,
   OfflinePaymentMethod,
   StorefrontPaymentMethod,
+  StorefrontShippingMethod,
 } from '@ecom/sdk-api';
-import { checkout, formatMoney, listPaymentMethods } from '../lib/api';
+import {
+  checkout,
+  formatMoney,
+  listPaymentMethods,
+  listShippingMethods,
+} from '../lib/api';
 import { fetchCustomerMe } from '../lib/auth';
 
 export function CheckoutForm({ locale }: { locale: string }) {
@@ -27,6 +33,11 @@ export function CheckoutForm({ locale }: { locale: string }) {
   const [paymentMethod, setPaymentMethod] = useState<OfflinePaymentMethod | ''>(
     '',
   );
+  const [shippingMethods, setShippingMethods] = useState<
+    StorefrontShippingMethod[]
+  >([]);
+  const [shippingError, setShippingError] = useState<string | null>(null);
+  const [shippingMethodId, setShippingMethodId] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -49,10 +60,38 @@ export function CheckoutForm({ locale }: { locale: string }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!paymentMethod) {
+      setShippingMethods([]);
+      setShippingMethodId('');
+      return;
+    }
+    let cancelled = false;
+    setShippingError(null);
+    listShippingMethods(paymentMethod)
+      .then((list) => {
+        if (cancelled) return;
+        setShippingMethods(list);
+        setShippingMethodId((prev) =>
+          list.some((m) => m.id === prev) ? prev : (list[0]?.id ?? ''),
+        );
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setShippingError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentMethod]);
+
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!paymentMethod) {
       setError('Select a payment method');
+      return;
+    }
+    if (!shippingMethodId) {
+      setError('Select a shipping method');
       return;
     }
     const fd = new FormData(e.currentTarget);
@@ -69,6 +108,7 @@ export function CheckoutForm({ locale }: { locale: string }) {
             country: String(fd.get('country') ?? 'PK'),
           },
           paymentMethod,
+          shippingMethodId,
         });
         setResult(session);
         setError(null);
@@ -89,7 +129,12 @@ export function CheckoutForm({ locale }: { locale: string }) {
           Order <code>{result.order.id}</code> is{' '}
           <strong>{result.order.status}</strong> (
           {result.order.paymentMethod} · {result.order.paymentStatus}). Total{' '}
-          {formatMoney(result.order.totalAmountMinor, result.order.currency)}.
+          {formatMoney(result.order.totalAmountMinor, result.order.currency)}
+          {' '}(subtotal{' '}
+          {formatMoney(result.order.subtotalAmountMinor, result.order.currency)}
+          {' '}+ shipping{' '}
+          {formatMoney(result.order.shippingAmountMinor, result.order.currency)}
+          {' '}· {result.shipping.methodName}).
         </p>
         {result.order.paymentMethod === 'cod' && (
           <p style={{ opacity: 0.85 }}>
@@ -151,6 +196,8 @@ export function CheckoutForm({ locale }: { locale: string }) {
     background: '#1a2430',
     color: 'inherit',
   };
+
+  const selectedShipping = shippingMethods.find((m) => m.id === shippingMethodId);
 
   return (
     <section style={{ maxWidth: 560, paddingTop: '2rem' }}>
@@ -261,23 +308,82 @@ export function CheckoutForm({ locale }: { locale: string }) {
           </div>
         </fieldset>
 
+        <fieldset
+          style={{
+            margin: 0,
+            padding: '0.85rem 1rem',
+            border: '1px solid #3a4a5c',
+            borderRadius: 4,
+          }}
+        >
+          <legend style={{ padding: '0 0.35rem' }}>Shipping method</legend>
+          {shippingError && (
+            <p style={{ color: '#ff8e8e', margin: '0 0 0.5rem' }}>{shippingError}</p>
+          )}
+          {!shippingError && paymentMethod && shippingMethods.length === 0 && (
+            <p style={{ opacity: 0.75, margin: 0 }}>
+              No shipping methods available for this payment method (COD filters
+              out non-COD-compatible rates).
+            </p>
+          )}
+          <div style={{ display: 'grid', gap: '0.5rem' }}>
+            {shippingMethods.map((m) => (
+              <label
+                key={m.id}
+                style={{
+                  display: 'flex',
+                  gap: '0.6rem',
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="shippingMethodId"
+                  value={m.id}
+                  checked={shippingMethodId === m.id}
+                  onChange={() => setShippingMethodId(m.id)}
+                  style={{ marginTop: '0.2rem' }}
+                />
+                <span>
+                  <strong style={{ fontWeight: 600 }}>{m.name}</strong>
+                  <span style={{ display: 'block', opacity: 0.7, fontSize: '0.85rem' }}>
+                    {formatMoney(m.priceAmountMinor, m.currency)}
+                    {!m.codCompatible ? ' · not COD-compatible' : ''}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {selectedShipping ? (
+            <p style={{ margin: '0.75rem 0 0', opacity: 0.8, fontSize: '0.9rem' }}>
+              Shipping add-on:{' '}
+              {formatMoney(
+                selectedShipping.priceAmountMinor,
+                selectedShipping.currency,
+              )}
+            </p>
+          ) : null}
+        </fieldset>
+
         {error && <p style={{ color: '#ff8e8e' }}>{error}</p>}
         <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
-          Offline payments only (COD / bank transfer). Stripe stays optional and
-          off by default.
+          Offline payments only (COD / bank transfer). Shipping cost is added to
+          the order total.
         </p>
         <button
           type="submit"
-          disabled={pending || !paymentMethod}
+          disabled={pending || !paymentMethod || !shippingMethodId}
           style={{
             background: '#3d8bfd',
             color: '#fff',
             border: 'none',
             padding: '0.75rem 1.25rem',
             fontSize: '1rem',
-            cursor: pending || !paymentMethod ? 'wait' : 'pointer',
+            cursor:
+              pending || !paymentMethod || !shippingMethodId ? 'wait' : 'pointer',
             justifySelf: 'start',
-            opacity: !paymentMethod ? 0.6 : 1,
+            opacity: !paymentMethod || !shippingMethodId ? 0.6 : 1,
           }}
         >
           {pending ? 'Placing…' : 'Place order'}

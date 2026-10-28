@@ -9,6 +9,8 @@ import { ComputeClientService } from '../src/common/compute.client';
 const DEMO_HOST = 'demo.localhost';
 const OTHER_HOST = 'other.localhost';
 const DEMO_VARIANT = '30000000-0000-4000-8000-000000000001';
+const DEMO_STANDARD_SHIP = '40000000-0000-4000-8000-000000000001';
+const OTHER_FLAT_SHIP = '40000000-0000-4000-8000-000000000010';
 const hasDb = Boolean(process.env.DATABASE_URL ?? true);
 
 describe('COD + bank transfer payments', () => {
@@ -162,6 +164,7 @@ describe('COD + bank transfer payments', () => {
         cartId,
         email: 'cod-guest@example.com',
         paymentMethod: 'cod',
+        shippingMethodId: DEMO_STANDARD_SHIP,
         shippingAddress: {
           line1: '12 Clifton',
           city: 'Karachi',
@@ -199,6 +202,7 @@ describe('COD + bank transfer payments', () => {
           cartId,
           email: 'transfer-guest@example.com',
           paymentMethod: 'bank_transfer',
+          shippingMethodId: DEMO_STANDARD_SHIP,
           shippingAddress: {
             line1: '45 Gulberg',
             city: 'Lahore',
@@ -228,6 +232,7 @@ describe('COD + bank transfer payments', () => {
       .send({
         cartId,
         email: 'no-method@example.com',
+        shippingMethodId: DEMO_STANDARD_SHIP,
         shippingAddress: {
           line1: '1 St',
           city: 'Karachi',
@@ -244,6 +249,7 @@ describe('COD + bank transfer payments', () => {
         cartId,
         email: 'stripe@example.com',
         paymentMethod: 'stripe_connect',
+        shippingMethodId: DEMO_STANDARD_SHIP,
         shippingAddress: {
           line1: '1 St',
           city: 'Karachi',
@@ -267,6 +273,7 @@ describe('COD + bank transfer payments', () => {
         cartId: otherCart.body.id,
         email: 'other@example.com',
         paymentMethod: 'bank_transfer',
+        shippingMethodId: OTHER_FLAT_SHIP,
         shippingAddress: {
           line1: '1 St',
           city: 'City',

@@ -9,6 +9,7 @@ import { ComputeClientService } from '../src/common/compute.client';
 const DEMO_HOST = 'demo.localhost';
 const OTHER_HOST = 'other.localhost';
 const DEMO_VARIANT = '30000000-0000-4000-8000-000000000001';
+const DEMO_STANDARD_SHIP = '40000000-0000-4000-8000-000000000001';
 const hasDb = Boolean(process.env.DATABASE_URL ?? true);
 
 describe('admin orders', () => {
@@ -81,6 +82,7 @@ describe('admin orders', () => {
         cartId,
         email,
         paymentMethod: 'cod',
+        shippingMethodId: DEMO_STANDARD_SHIP,
         shippingAddress: {
           line1: '1 Demo St',
           city: 'Demo City',

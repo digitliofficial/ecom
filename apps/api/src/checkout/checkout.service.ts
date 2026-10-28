@@ -19,6 +19,7 @@ import {
   PaymentsService,
   type BankDetails,
 } from '../payments/payments.service';
+import { ShippingService } from '../shipping/shipping.service';
 
 export type ShippingAddressInput = {
   line1: string;
@@ -41,11 +42,20 @@ export type CheckoutResult = {
     normalized: ShippingAddressInput;
     provider: string;
   };
+  shipping: {
+    methodId: string;
+    methodName: string;
+    amountMinor: number;
+    currency: string;
+    adapter: string;
+  };
   order: {
     id: string;
     status: 'pending' | 'placed';
     paymentStatus: string;
     paymentMethod: OfflinePaymentMethod;
+    subtotalAmountMinor: number;
+    shippingAmountMinor: number;
     totalAmountMinor: number;
     currency: string;
     accessToken: string;
@@ -66,6 +76,7 @@ export class CheckoutService {
     private readonly carts: CartService,
     private readonly compute: ComputeClientService,
     private readonly paymentsConfig: PaymentsService,
+    private readonly shipping: ShippingService,
   ) {}
 
   async createSession(
@@ -75,6 +86,7 @@ export class CheckoutService {
       email: string;
       shippingAddress: ShippingAddressInput;
       paymentMethod: string;
+      shippingMethodId: string;
       customerId?: string | null;
     },
   ): Promise<CheckoutResult> {
@@ -91,10 +103,19 @@ export class CheckoutService {
         'paymentMethod must be cod or bank_transfer',
       );
     }
+    if (!input.shippingMethodId?.trim()) {
+      throw new BadRequestException('shippingMethodId is required');
+    }
 
     const paymentMethod = input.paymentMethod;
     const { bankDetails } = await this.paymentsConfig.assertMethodEnabled(
       tenantId,
+      paymentMethod,
+    );
+
+    const shippingMethod = await this.shipping.assertMethodForCheckout(
+      tenantId,
+      input.shippingMethodId.trim(),
       paymentMethod,
     );
 
@@ -115,10 +136,12 @@ export class CheckoutService {
       country: input.shippingAddress.country,
     });
 
-    const total = cart.lines.reduce(
+    const subtotal = cart.lines.reduce(
       (sum, l) => sum + l.unitAmountMinor * l.quantity,
       0,
     );
+    const shippingAmount = shippingMethod.priceAmountMinor;
+    const total = subtotal + shippingAmount;
     const currency = cart.chargeCurrency ?? cart.lines[0]?.currency ?? 'USD';
 
     // Offline PaymentProvider adapters (COD / bank transfer). Stripe/Noop stay optional.
@@ -127,7 +150,10 @@ export class CheckoutService {
       tenantId,
       amountMinor: total,
       currency,
-      metadata: { paymentMethod },
+      metadata: {
+        paymentMethod,
+        shippingMethodId: shippingMethod.id,
+      },
     });
 
     const orderStatus: 'pending' | 'placed' = 'placed';
@@ -166,8 +192,10 @@ export class CheckoutService {
         `INSERT INTO orders
            (tenant_id, cart_id, checkout_session_id, status, payment_status,
             payment_method, guest_email, customer_id, shipping_address,
-            charge_currency, total_amount_minor, access_token_hash)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)
+            charge_currency, total_amount_minor, access_token_hash,
+            shipping_method_id, shipping_method_name, shipping_amount_minor)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12,
+                 $13, $14, $15)
          RETURNING id`,
         [
           tenantId,
@@ -182,6 +210,9 @@ export class CheckoutService {
           currency,
           total,
           accessTokenHash,
+          shippingMethod.id,
+          shippingMethod.name,
+          shippingAmount,
         ],
       );
 
@@ -218,11 +249,20 @@ export class CheckoutService {
           normalized: validation.normalized,
           provider: 'stub',
         },
+        shipping: {
+          methodId: shippingMethod.id,
+          methodName: shippingMethod.name,
+          amountMinor: shippingAmount,
+          currency: shippingMethod.currency,
+          adapter: shippingMethod.adapter,
+        },
         order: {
           id: orderId,
           status: orderStatus,
           paymentStatus,
           paymentMethod,
+          subtotalAmountMinor: subtotal,
+          shippingAmountMinor: shippingAmount,
           totalAmountMinor: total,
           currency,
           accessToken,

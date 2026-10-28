@@ -2,7 +2,7 @@
 
 Multi-tenant ecommerce SaaS monorepo (NestJS commerce core, FastAPI compute, Next.js storefront/admin).
 
-**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`), FastAPI address stub, storefront flow, merchant admin product CRUD + order fulfill/ship/cancel + payment settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**.
+**Phase 0 + guest/account checkout + merchant catalog/orders admin + real auth + offline payments + shipping/couriers MVP** — foundations, demo tenant RLS, guest cart cookie/token, checkout → `placed` order with **COD** (`pending_cod`) or **bank transfer** (`pending_transfer`) plus a selected **shipping method** (flat-rate cost on the total), FastAPI address + **CourierPort** stubs, storefront flow, merchant admin product CRUD + order fulfill/ship/cancel (with tracking) + payment + shipping settings, and email/password sessions (JWT httpOnly cookies) for merchant staff and customers. Stripe/Noop stay optional and **disabled by default**. Pakistan/local courier adapters are documented extension points (not live yet).
 
 ## Stack
 
@@ -27,7 +27,7 @@ docker compose up -d
 # Copy env
 cp .env.example .env
 
-# If the Postgres volume predates catalog/admin/auth/payments SQL, re-apply idempotent init:
+# If the Postgres volume predates catalog/admin/auth/payments/shipping SQL, re-apply idempotent init:
 pnpm db:apply
 # Cross-platform (Node); works in Windows PowerShell — no Git Bash required.
 
@@ -71,7 +71,7 @@ docker compose down -v && docker compose up -d
 ```powershell
 docker compose up -d
 pnpm db:apply
-# Expect: "Applying init SQL via docker compose…" then "OK — schema/seed/RLS/host resolve/catalog admin/auth/payments applied."
+# Expect: "Applying init SQL via docker compose…" then "OK — …/payments/shipping applied."
 curl.exe -sS -H "x-tenant-host: demo.localhost" http://localhost:3001/v1/catalog/products
 ```
 
@@ -143,11 +143,12 @@ pnpm --filter @ecom/api dev          # :3001
 pnpm --filter @ecom/storefront dev   # :3005 → /en
 ```
 
-Flow: home → Add to cart → cart → checkout (email + address + **payment method**) → order `placed` with `pending_cod` (COD) or `pending_transfer` (bank transfer + instructions). Optional: sign in as `customer@demo.localhost` first (guest cart attaches to the account). Placed orders show up under merchant **Orders** admin (below).
+Flow: home → Add to cart → cart → checkout (email + address + **payment method** + **shipping method**) → order `placed` with `pending_cod` (COD) or `pending_transfer` (bank transfer + instructions); shipping cost is included in `totalAmountMinor`. Optional: sign in as `customer@demo.localhost` first (guest cart attaches to the account). Placed orders show up under merchant **Orders** admin (below).
 
 ```bash
-# Enabled methods for demo tenant
+# Enabled payment + shipping methods for demo tenant
 curl -sS -H 'Host: demo.localhost' http://localhost:3001/v1/payments/methods
+curl -sS -H 'Host: demo.localhost' 'http://localhost:3001/v1/shipping/methods?paymentMethod=cod'
 ```
 
 ### Offline payments — COD + bank transfer (local)
@@ -187,9 +188,46 @@ Checkout (guest cart token from `POST /v1/carts`):
 ```bash
 curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
   -H "X-Cart-Token: $GUEST_TOKEN" \
-  -d '{"cartId":"'"$CART_ID"'","email":"guest@example.com","paymentMethod":"cod","shippingAddress":{"line1":"12 Clifton","city":"Karachi","country":"PK"}}' \
+  -d '{"cartId":"'"$CART_ID"'","email":"guest@example.com","paymentMethod":"cod","shippingMethodId":"40000000-0000-4000-8000-000000000001","shippingAddress":{"line1":"12 Clifton","city":"Karachi","country":"PK"}}' \
   http://localhost:3001/v1/checkout/sessions
 ```
+
+### Shipping / couriers MVP (local)
+
+Manual flat-rate methods in Nest (SoT) + FastAPI **CourierPort** stubs (`manual`, `aggregator_stub`). Pakistan / local carriers later: implement `local_pk_*` in `apps/compute/app/couriers/` and set `shipping_methods.adapter` — same quote/book/track surface.
+
+```bash
+pnpm db:apply                       # 09-shipping.sql
+pnpm --filter @ecom/api dev         # :3001
+pnpm --filter @ecom/admin dev       # :3002
+pnpm --filter @ecom/storefront dev  # :3005
+# optional CourierPort: cd apps/compute && uv run uvicorn app.main:app --port 8000
+```
+
+1. Admin → **Shipping** — add/edit flat-rate methods (name, price minor units, COD-compatible, adapter).
+2. Storefront checkout — pick a shipping method (COD hides non-COD-compatible rates); cost is added to the order total.
+3. Admin → **Orders** → open order → enter tracking (optional) → **Fulfill** / **Mark shipped**.
+
+```bash
+TOKEN=$(curl -sS -X POST -H 'Host: demo.localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"owner@demo.localhost","password":"DemoOwner123!"}' \
+  http://localhost:3001/v1/auth/staff/login | jq -r .token)
+
+curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3001/v1/admin/shipping/methods
+
+curl -sS -X POST -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Same-day","priceAmountMinor":1200,"currency":"USD","codCompatible":true,"adapter":"manual"}' \
+  http://localhost:3001/v1/admin/shipping/methods
+
+# FastAPI CourierPort stubs
+curl -sS -X POST http://localhost:8000/v1/shipping/rates \
+  -H 'Content-Type: application/json' \
+  -d '{"adapter":"aggregator_stub","to":{"line1":"1 St","city":"Karachi","country":"PK"}}'
+```
+
+Demo seed methods: Standard (`500`), Express (`1500`), Aggregator stub (`800`, not COD-compatible).
 
 ### Merchant orders admin (local)
 
@@ -203,7 +241,7 @@ pnpm --filter @ecom/storefront dev  # :3005 → /en
 1. On the storefront, complete a guest checkout (any email + address) so an order is `placed`.
 2. Open http://localhost:3002/login — sign in as `owner@demo.localhost` / `DemoOwner123!`.
 3. Go to **Orders** — the guest order appears for the demo tenant (newest first).
-4. Open the order → **Fulfill**, **Mark shipped**, or **Cancel** (`placed`/`pending` → terminal status). Fulfill and ship also set line `qty_fulfilled = qty_ordered`.
+4. Open the order → optionally set **tracking number / carrier** → **Fulfill**, **Mark shipped**, or **Cancel** (`placed`/`pending` → terminal status). Fulfill and ship also set line `qty_fulfilled = qty_ordered` and write a `shipments` row.
 
 Admin API (staff JWT required; host → demo tenant):
 
@@ -220,7 +258,7 @@ curl -sS -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
 
 curl -sS -X PATCH -H 'Host: demo.localhost' -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"status":"fulfilled"}' \
+  -d '{"status":"shipped","trackingNumber":"TCS-DEMO-001","trackingCarrier":"TCS"}' \
   http://localhost:3001/v1/admin/orders/<ORDER_ID>/status
 ```
 

@@ -9,6 +9,7 @@ import { ComputeClientService } from '../src/common/compute.client';
 const DEMO_HOST = 'demo.localhost';
 const OTHER_HOST = 'other.localhost';
 const DEMO_VARIANT = '30000000-0000-4000-8000-000000000001';
+const DEMO_STANDARD_SHIP = '40000000-0000-4000-8000-000000000001';
 
 const hasDb = Boolean(process.env.DATABASE_URL ?? true);
 
@@ -100,6 +101,7 @@ describe('guest checkout vertical slice', () => {
         cartId,
         email: 'guest@example.com',
         paymentMethod: 'cod',
+        shippingMethodId: DEMO_STANDARD_SHIP,
         shippingAddress: {
           line1: ' 123 Demo St ',
           city: ' Austin ',
@@ -112,7 +114,10 @@ describe('guest checkout vertical slice', () => {
     expect(checkout.body.order.status).toBe('placed');
     expect(checkout.body.order.paymentMethod).toBe('cod');
     expect(checkout.body.order.paymentStatus).toBe('pending_cod');
-    expect(checkout.body.order.totalAmountMinor).toBe(7500);
+    // 3 × 2500 subtotal + 500 standard shipping
+    expect(checkout.body.order.subtotalAmountMinor).toBe(7500);
+    expect(checkout.body.order.shippingAmountMinor).toBe(500);
+    expect(checkout.body.order.totalAmountMinor).toBe(8000);
     expect(checkout.body.payment.status).toBe('pending_cod');
     expect(checkout.body.payment.provider).toBe('cod');
     expect(checkout.body.bankTransferInstructions).toBeNull();
