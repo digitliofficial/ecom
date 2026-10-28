@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js:
+    name: lint-typecheck-test-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run lint typecheck test build
+
+  python-compute:
+    name: compute-ruff-pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/compute
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --extra dev
+      - run: uv run ruff check app tests
+      - run: uv run pytest
+
+  compose-smoke:
+    name: compose-smoke
+    runs-on: ubuntu-latest
+    if: false # enable when images + health servers start in CI
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up -d
+      - run: echo "hit /health when api/compute containers are defined"

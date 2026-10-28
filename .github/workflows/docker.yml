@@ -1,0 +1,19 @@
+name: docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [api, compute, storefront, admin]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.target }} (no push)
+        run: |
+          echo "Dockerfile stub for ${{ matrix.target }} — registry push when secrets exist"
+          # docker build -f infra/docker/Dockerfile.${{ matrix.target }} -t ecom-${{ matrix.target }}:ci .
