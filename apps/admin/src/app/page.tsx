@@ -15,12 +15,15 @@ export default async function AdminHome() {
   return (
     <AdminShell email={email}>
       <p style={{ marginTop: '1.5rem', maxWidth: 480 }}>
-        Signed in as demo tenant staff. Manage catalog under Products;
-        Localization remains a settings shell.
+        Signed in as demo tenant staff. Manage catalog under Products, fulfill
+        guest checkout orders under Orders; Localization remains a settings shell.
       </p>
       <ul style={{ marginTop: '1.25rem', paddingLeft: '1.2rem', lineHeight: 1.7 }}>
         <li>
           <Link href="/products">Products</Link> — list / create / edit catalog
+        </li>
+        <li>
+          <Link href="/orders">Orders</Link> — list / detail / fulfill · ship · cancel
         </li>
         <li>
           <Link href="/localization">Localization</Link> — locale &amp; currency shell
